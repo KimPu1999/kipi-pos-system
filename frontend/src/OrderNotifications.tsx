@@ -103,6 +103,7 @@ export default function OrderNotifications({
     if (!loaded) return;
     const changes: Notice[] = [];
     const eligible = (o: Order) =>
+      !(admin && o.status === 'completed') &&
       ['pending', 'confirmed', 'ready', 'completed', 'cancelled'].includes(o.status);
     const noticeKey = (o: Order) =>
       `order-update:${o.id}:${o.status}:${o.delivery_status ?? 'no-delivery'}:${!!o.customer_confirmed_at}:${o.sale_id ?? 'unpaid'}`;

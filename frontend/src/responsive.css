@@ -59,6 +59,7 @@
     overflow-wrap: anywhere;
   }
 }
+
 @media screen and (max-width: 1024px) {
   .portal :is(.overview-analytics, .dashboard-grid, .customer-home-grid, .employee-forms) {
     grid-template-columns: minmax(0, 1fr);
@@ -260,6 +261,113 @@
 }
 @media (max-width: 600px) {
   .report-export-controls button {
+    width: 100%;
+  }
+}
+
+/* Desktop app shell: header and footer stay onscreen; middle panels scroll. */
+@media screen and (min-width: 1025px) {
+  html:has(.portal),
+  body:has(.portal),
+  #root:has(.portal) {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .portal,
+  .portal.sidebar-open,
+  .portal.sidebar-closed {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .portal.sidebar-open {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .portal.sidebar-closed {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .portal > .portal-nav,
+  .portal > .portal-content,
+  .portal > .app.pos-app,
+  .portal .pos-app > main {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .portal > .portal-nav,
+  .portal > .portal-content,
+  .portal .pos-app > main {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .portal > .app.pos-app {
+    overflow: hidden;
+  }
+
+  .portal > .portal-top,
+  .portal > .portal-footer {
+    position: static;
+    flex-shrink: 0;
+  }
+}
+
+/* The site footer follows the page content instead of staying fixed onscreen. */
+@media screen and (max-width: 1024px) {
+  html:has(.portal),
+  body:has(.portal),
+  #root:has(.portal) {
+    width: 100%;
+    min-height: 100%;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+  }
+
+  .portal,
+  .portal.sidebar-open,
+  .portal.sidebar-closed {
+    min-height: 100dvh;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .portal > .portal-content,
+  .portal > .app.pos-app,
+  .portal .pos-app > main,
+  .portal.sidebar-open > .portal-content,
+  .portal.sidebar-open > .app.pos-app,
+  .portal.sidebar-closed > .portal-content,
+  .portal.sidebar-closed > .app.pos-app {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+  }
+
+  .portal > .portal-content,
+  .portal .pos-app > main {
+    overflow: visible;
+  }
+
+  .portal > .portal-footer {
+    position: static;
+  }
+
+  .portal > .portal-top {
+    position: sticky;
+    top: 0;
+    z-index: 90;
     width: 100%;
   }
 }
@@ -557,6 +665,148 @@
   color: var(--ink) !important;
   text-decoration: none !important;
 }
+
+.portal .sidebar-drawer-header {
+  display: none;
+}
+
+@media screen and (max-width: 1024px) {
+  .portal.sidebar-open .sidebar-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+  }
+
+  .portal .sidebar-drawer-header .kipi-brand-lockup {
+    width: min(128px, 60%);
+  }
+
+  .portal .sidebar-drawer-header .kipi-brand-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .portal .sidebar-drawer-close {
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    padding: 0;
+    border: 1px solid var(--box-border);
+    border-radius: 10px;
+    background: var(--box-bg);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .portal .sidebar-drawer-close:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .portal .sidebar-drawer-close:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+.portal > .portal-top {
+  min-height: 10px;
+}
+
+/* Desktop collapsed menu: keep navigation available as one compact row. */
+@media screen and (min-width: 1025px) {
+  .portal {
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+
+  .portal.sidebar-open > .portal-nav,
+  .portal.sidebar-open > .portal-content,
+  .portal.sidebar-open > .app.pos-app {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .portal.sidebar-open > .portal-nav,
+  .portal.sidebar-open > .portal-content {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+
+  .portal.sidebar-open > .app.pos-app {
+    overflow: hidden;
+  }
+
+  .portal.sidebar-closed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  .portal.sidebar-closed > .portal-nav {
+    display: flex;
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    padding: 8px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .portal.sidebar-closed > .portal-nav > .portal-nav-items {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+    padding: 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+  }
+
+  .portal.sidebar-closed .portal-nav-items > button {
+    width: auto;
+    min-height: 42px;
+    padding: 9px 12px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .portal.sidebar-closed > .portal-nav > .portal-sidebar-account {
+    display: none;
+  }
+
+  .portal.sidebar-closed > .portal-content,
+  .portal.sidebar-closed > .app.pos-app {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .portal.sidebar-closed > .portal-footer {
+    grid-row: 4;
+  }
+}
+
 @media (max-width: 600px) {
   .portal .header-menu-toggle {
     width: 38px;

@@ -197,6 +197,15 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     [editing, setEditing] = useState<Product | null>(null),
     [showForm, setShowForm] = useState(false);
   const [navigationDepth, setNavigationDepth] = useState(0);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('.portal > .portal-content')?.scrollTo({ top: 0 });
+      document.querySelector<HTMLElement>('.portal > .app.pos-app > main')?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [tab]);
+
   function setTab(next: string) {
     if (next === tab) return;
     const depth = (history.state?.kipiUser === user.id ? history.state.kipiDepth : 0) + 1;
@@ -799,7 +808,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
             title={sidebarOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setSidebarOpen((open) => !open)}
           >
-            {sidebarOpen ? <X size={21} /> : <Menu size={21} />}
+            <Menu size={21} />
           </button>
           <button
             type="button"
@@ -858,15 +867,18 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
         />
       )}
       <nav id="portal-sidebar" className="portal-nav" aria-label="Main menu">
-        <button
-          type="button"
-          className="sidebar-mobile-close"
-          aria-label="Close sidebar menu"
-          onClick={() => setSidebarOpen(false)}
-        >
-          <span>Menu</span>
-          <X size={22} />
-        </button>
+        <div className="sidebar-drawer-header">
+          <BrandLogo showPos={false} />
+          <button
+            type="button"
+            className="sidebar-drawer-close"
+            aria-label="Close sidebar menu"
+            title="Close menu"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X size={22} />
+          </button>
+        </div>
         <div className="portal-nav-items">
           {nav.map(([key, label, Icon]) => (
             <button
