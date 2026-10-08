@@ -1,0 +1,571 @@
+/* Shared responsive layout for both portals. Keep user-selected typography. */
+@media screen {
+  .portal {
+    font-size: var(--setting-font-size, 16px);
+    line-height: 1.6;
+  }
+  .portal :is(.portal-content, .pos-app > main, .panel, fieldset) {
+    min-width: 0;
+  }
+  .portal :is(p, label, small, h1, h2, h3, .cart-item-info, .sidebar-account-info) {
+    overflow-wrap: anywhere;
+  }
+  .portal :is(p, label) {
+    line-height: 1.65;
+  }
+  .portal :is(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: var(--setting-font-size, 16px);
+  }
+  .portal :is(input, select) {
+    min-height: 44px;
+  }
+  .portal input:is([type='checkbox'], [type='radio']) {
+    min-height: 0;
+  }
+  .portal textarea {
+    resize: vertical;
+  }
+  .portal :is(.table-wrap, .table-scroll) {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+  .portal table {
+    width: 100%;
+  }
+  .portal :is(.table-wrap, .table-scroll) table {
+    min-width: 560px;
+  }
+  .portal :is(.order-actions, .receipt-actions, .settings-toolbar) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .portal :is(.order-actions, .receipt-actions) > button {
+    min-height: 44px;
+  }
+  .portal .portal-nav-items button {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .portal .portal-heading h1 {
+    font-size: clamp(24px, 2.5vw, 34px);
+    line-height: 1.25;
+  }
+  .portal :is(.metric h2, .customer-stat > b, .report-metrics h2) {
+    overflow-wrap: anywhere;
+  }
+}
+@media screen and (max-width: 1024px) {
+  .portal :is(.overview-analytics, .dashboard-grid, .customer-home-grid, .employee-forms) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .portal :is(.customer-featured, .dashboard-shortcuts) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .portal :is(.dashboard-welcome, .customer-welcome) {
+    padding: 24px;
+    gap: 20px;
+  }
+  .portal .dashboard-welcome {
+    flex-wrap: wrap;
+  }
+  .portal .welcome-store {
+    min-width: 0;
+    padding: 16px;
+    border-left: 0;
+  }
+  .portal .settings-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portal .dining-table-grid,
+  .portal .table-choice-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+@media screen and (max-width: 600px) {
+  .portal
+    :is(
+      .customer-featured,
+      .dashboard-shortcuts,
+      .settings-fields,
+      .settings-preview-grid,
+      .purchase-fields,
+      .employee-time-fields,
+      .product-form,
+      .order-contact-fields
+    ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .portal :is(.metric-grid, .customer-stats, .report-metrics, .product-summary) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .portal .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .portal :is(.dashboard-welcome, .customer-welcome) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+    gap: 16px;
+  }
+  .portal .customer-welcome-art {
+    display: none;
+  }
+  .portal .welcome-store {
+    width: 100%;
+    padding: 14px;
+  }
+  .portal :is(.dashboard-welcome h2, .customer-welcome h2) {
+    font-size: 26px;
+    line-height: 1.3;
+  }
+  .portal
+    :is(
+      .section-heading,
+      .customer-panel-heading,
+      .dashboard-panel-title,
+      .shop-cart-title,
+      .orders-result-heading
+    ) {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .portal .product-info {
+    padding: 12px;
+  }
+  .portal .product-info h3 {
+    font-size: 16px !important;
+    line-height: 1.4;
+  }
+  .portal .product-info > div {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .portal :is(.customer-hero-button, .welcome-action, .checkout) {
+    min-height: 48px;
+    white-space: normal;
+  }
+  .portal .search {
+    min-width: 0;
+    width: 100%;
+  }
+  .portal .search input {
+    width: 100%;
+    min-width: 0;
+    font-size: max(16px, var(--setting-font-size, 16px));
+  }
+  .portal .search kbd {
+    display: none;
+  }
+  .portal :is(.categories, .order-filter-tabs) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .portal :is(.order-pagination, .report-controls) {
+    flex-wrap: wrap;
+  }
+  .portal :is(td, th) {
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+  .portal .order-status-card > header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .portal .purchase-record summary {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .portal .order-edit-line {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .payment-dialog {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+    box-sizing: border-box;
+  }
+}
+@media screen and (max-width: 360px) {
+  .portal :is(.product-grid, .metric-grid, .customer-stats, .report-metrics, .product-summary) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .portal :is(.dining-table-grid, .table-choice-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portal .portal-heading h1 {
+    font-size: 23px;
+  }
+}
+/* Requested mobile Kipi logo dimensions. */
+@media screen and (max-width: 600px) {
+  .portal .portal-top .sidebar-logo-toggle {
+    width: 82px;
+    max-width: 82px;
+    min-height: 56px;
+  }
+  .portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+    width: 82px;
+    height: 56px;
+    max-width: 82px;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image,
+  .portal .kipi-footer-brand .kipi-brand-image {
+    width: 82px;
+    height: 56px;
+    max-width: 82px;
+    max-height: 56px;
+    aspect-ratio: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+}
+.report-export-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.report-export-controls label {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 200px;
+  font-weight: 700;
+}
+.report-export-controls :is(input, select) {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--control);
+  color: var(--ink);
+}
+.report-export-controls button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 9px;
+}
+@media (max-width: 600px) {
+  .report-export-controls button {
+    width: 100%;
+  }
+}
+.inventory-edit-fields {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+.inventory-edit-fields label {
+  display: grid;
+  gap: 7px;
+  font-weight: 700;
+}
+.inventory-edit-fields input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+}
+.inventory-edit-fields input[readonly] {
+  background: var(--soft);
+  color: var(--muted);
+}
+.inventory-edit-fields .card-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.inventory-edit-fields input[type='checkbox'] {
+  width: 20px;
+}
+
+/* Header logo with POS wordmark */
+.portal .portal-top .sidebar-logo-toggle {
+  width: auto !important;
+  max-width: min(190px, 38vw) !important;
+  overflow: visible !important;
+}
+.portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+  width: auto !important;
+  max-width: 100% !important;
+  gap: 8px !important;
+}
+.portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+  width: 112px !important;
+  max-width: calc(100% - 45px) !important;
+  height: auto !important;
+}
+.portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+  display: inline-block !important;
+  flex-shrink: 0;
+  font-size: 20px !important;
+  color: var(--ink) !important;
+}
+@media (max-width: 600px) {
+  .portal .portal-top .sidebar-logo-toggle {
+    max-width: min(145px, 42vw) !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+    width: 82px !important;
+    max-width: calc(100% - 38px) !important;
+    height: 56px !important;
+    object-fit: contain;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+    font-size: 17px !important;
+  }
+}
+
+/* Final header brand lockup: Kipi image + POS + centered contact details */
+@media (min-width: 1025px) {
+  .portal > .portal-top {
+    display: grid !important;
+    grid-template-columns: auto minmax(260px, 1fr) auto !important;
+    align-items: center !important;
+    column-gap: 28px !important;
+    min-height: 104px !important;
+    padding: 8px 28px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle {
+    grid-column: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 88px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+    width: auto !important;
+    max-width: none !important;
+    gap: 18px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+    width: 160px !important;
+    max-width: 160px !important;
+    height: 88px !important;
+    object-fit: contain !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+    display: inline-block !important;
+    font-size: 42px !important;
+    line-height: 1 !important;
+    letter-spacing: 1px !important;
+    color: #26211f !important;
+  }
+  .portal .portal-top .header-contact {
+    position: static !important;
+    grid-column: 2 !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 34px !important;
+    width: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    transform: none !important;
+  }
+  .portal .portal-top .header-contact a,
+  .portal .portal-top .header-contact a:first-child {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .portal .portal-top .header-contact span {
+    display: none !important;
+  }
+  .portal .portal-top .header-contact strong {
+    max-width: none !important;
+    font-size: 18px !important;
+    color: #695d57 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+  .portal .portal-top .portal-user {
+    grid-column: 3 !important;
+  }
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .portal > .portal-top {
+    grid-template-columns: auto minmax(180px, 1fr) auto !important;
+    grid-template-rows: auto !important;
+    column-gap: 14px !important;
+    min-height: 82px !important;
+    padding: 8px 14px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+    width: auto !important;
+    gap: 9px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+    width: 112px !important;
+    max-width: 112px !important;
+    height: 62px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+    font-size: 29px !important;
+    color: #26211f !important;
+  }
+  .portal .portal-top .header-contact {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    border: 0 !important;
+    padding: 0 !important;
+    gap: 16px !important;
+  }
+  .portal .portal-top .header-contact span {
+    display: none !important;
+  }
+  .portal .portal-top .header-contact strong {
+    font-size: 12px !important;
+    color: #695d57 !important;
+  }
+  .portal .portal-top .portal-user {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+  }
+}
+@media (max-width: 600px) {
+  .portal .portal-top .sidebar-logo-toggle {
+    width: auto !important;
+    max-width: 145px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+    gap: 6px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+    width: 86px !important;
+    max-width: 86px !important;
+    height: 50px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+    font-size: 20px !important;
+    color: #26211f !important;
+  }
+}
+[data-theme='dark'] .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
+  color: var(--ink) !important;
+}
+
+/* Exact header logo size requested */
+.portal .portal-top .sidebar-logo-toggle {
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+  min-height: 58px !important;
+}
+.portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup {
+  width: 110px !important;
+  height: 58px !important;
+  max-width: 110px !important;
+}
+.portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+  display: block !important;
+  width: 110px !important;
+  height: 58px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+  max-height: 58px !important;
+  object-fit: contain !important;
+}
+@media (max-width: 600px) {
+  .portal .portal-top .sidebar-logo-toggle {
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    min-height: 58px !important;
+  }
+  .portal .portal-top .sidebar-logo-toggle > .kipi-brand-lockup,
+  .portal .portal-top .sidebar-logo-toggle .kipi-brand-image {
+    width: 110px !important;
+    height: 58px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    max-height: 58px !important;
+  }
+}
+
+/* Keep the customer page title and remove only its explanation text. */
+.customer-portal .portal-content > .portal-heading > div > p {
+  display: none !important;
+}
+
+/* Dedicated sidebar menu controls and consistent navigation icons */
+.portal .header-brand-logo {
+  cursor: default !important;
+  pointer-events: none;
+}
+.portal .header-menu-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  padding: 0;
+  border: 1px solid var(--box-border);
+  border-radius: 10px;
+  background: var(--box-bg);
+  color: var(--ink);
+}
+.portal .header-menu-toggle:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--box-bg));
+  color: var(--primary);
+}
+.portal .header-menu-toggle:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline-offset: 2px;
+}
+.portal .header-menu-toggle svg,
+.portal .sidebar-mobile-close svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2;
+  flex-shrink: 0;
+}
+.portal .portal-nav-items > button > svg {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+  stroke-width: 2;
+}
+.portal .sidebar-mobile-close {
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 46px;
+  border: 1px solid var(--box-border) !important;
+  border-radius: 10px !important;
+  background: var(--control) !important;
+  color: var(--ink) !important;
+  text-decoration: none !important;
+}
+@media (max-width: 600px) {
+  .portal .header-menu-toggle {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 9px;
+  }
+  .portal .header-menu-toggle svg {
+    width: 20px;
+    height: 20px;
+  }
+}

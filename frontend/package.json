@@ -1,0 +1,26 @@
+{
+  "name": "pos-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "format": "prettier --config prettier.config.mjs --write \"src/**/*.{ts,tsx,css}\" \"*.{ts,json,html}\" \"../backend/{app,config,database,routes,tests}/**/*.php\" \"../backend/bootstrap/{app,providers}.php\" \"../backend/public/index.php\" \"../backend/composer.json\" \"../README.md\"",
+    "format:check": "prettier --config prettier.config.mjs --check \"src/**/*.{ts,tsx,css}\" \"*.{ts,json,html}\" \"../backend/{app,config,database,routes,tests}/**/*.php\" \"../backend/bootstrap/{app,providers}.php\" \"../backend/public/index.php\" \"../backend/composer.json\" \"../README.md\""
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@prettier/plugin-php": "^0.25.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "^3.9.9",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.0"
+  }
+}
