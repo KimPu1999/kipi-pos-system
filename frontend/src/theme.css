@@ -3249,6 +3249,38 @@ body {
   font-size: var(--setting-font-size);
   font-weight: var(--setting-font-weight);
 }
+:root[data-custom-settings='true'][data-portal-role='admin'] .admin-portal {
+  font-family: var(--setting-font-family, 'DM Sans', sans-serif);
+  font-size: var(--setting-font-size, 16px);
+  font-weight: var(--setting-font-weight, 600);
+}
+:root[data-custom-settings='true'][data-portal-role='admin']
+  .admin-portal
+  :is(button, input, select, textarea, dialog, table) {
+  font-family: inherit;
+}
+:root[data-custom-settings='true'][data-portal-role='admin']
+  .admin-portal
+  :is(p, label, button, input, select, textarea, td, th, small, span, a) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+:root[data-custom-settings='true'][data-portal-role='customer'] .customer-portal {
+  font-family: var(--setting-font-family, 'DM Sans', sans-serif);
+  font-size: var(--setting-font-size, 16px);
+  font-weight: var(--setting-font-weight, 600);
+}
+:root[data-custom-settings='true'][data-portal-role='customer']
+  .customer-portal
+  :is(button, input, select, textarea, dialog, table) {
+  font-family: inherit;
+}
+:root[data-custom-settings='true'][data-portal-role='customer']
+  .customer-portal
+  :is(p, label, button, input, select, textarea, td, th, small, span, a) {
+  font-size: inherit;
+  font-weight: inherit;
+}
 [data-custom-settings='true'] :is(.portal, .auth-card) :is(.primary, .checkout) {
   background: var(--primary);
   border-color: var(--primary);

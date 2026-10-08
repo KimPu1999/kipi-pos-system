@@ -18,6 +18,7 @@ export default function Settings() {
     light_text: '#29231e',
     dark_background: '#131519',
     dark_text: '#f2f4f8',
+    font_family: 'dm_sans',
     font_size: 16,
     font_weight: 600,
     default_theme: 'light',
@@ -268,6 +269,24 @@ export default function Settings() {
               <small>Applied after discounts. Enter 0 to disable tax.</small>
             </label>
             <label>
+              Font family
+              <select
+                value={data.font_family}
+                onChange={(e) =>
+                  setData({
+                    ...data,
+                    font_family: e.target.value as SettingsData['font_family'],
+                  })
+                }
+              >
+                <option value="dm_sans">DM Sans</option>
+                <option value="system">System</option>
+                <option value="manrope">Manrope</option>
+                <option value="georgia">Georgia</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </label>
+            <label>
               Text size
               <select
                 value={data.font_size}
@@ -329,6 +348,16 @@ export default function Settings() {
                   style={{
                     background: data[`${theme}_background`],
                     color: data[`${theme}_text`],
+                    fontFamily:
+                      data.font_family === 'system'
+                        ? "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                        : data.font_family === 'manrope'
+                          ? "'Manrope', 'DM Sans', sans-serif"
+                          : data.font_family === 'georgia'
+                            ? "Georgia, 'Times New Roman', serif"
+                            : data.font_family === 'monospace'
+                              ? "'SFMono-Regular', Consolas, 'Liberation Mono', monospace"
+                              : "'DM Sans', sans-serif",
                     fontSize: data.font_size,
                     fontWeight: data.font_weight,
                   }}
