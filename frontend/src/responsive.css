@@ -321,6 +321,42 @@
   }
 }
 
+/* Keep the responsive site header fixed while the page content scrolls. */
+@media screen and (max-width: 1024px) {
+  .portal {
+    --responsive-header-height: 80px;
+    padding-top: var(--responsive-header-height);
+    box-sizing: border-box;
+  }
+
+  .portal > .portal-top {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    min-height: var(--responsive-header-height);
+    box-sizing: border-box;
+    z-index: 90;
+    background: var(--surface);
+    box-shadow:
+      0 1px 0 var(--line),
+      0 5px 16px #0000000d;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .portal {
+    --responsive-header-height: 76px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .portal {
+    --responsive-header-height: 132px;
+  }
+}
+
 /* The site footer follows the page content instead of staying fixed onscreen. */
 @media screen and (max-width: 1024px) {
   html:has(.portal),
