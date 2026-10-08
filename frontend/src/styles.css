@@ -2344,6 +2344,17 @@ th {
   background: #e6f1dd;
   color: #56813a;
 }
+.products-panel .delete-product-button,
+.product-delete-dialog .delete-product-confirm {
+  background: #fbe7e7;
+  color: #a22c2c;
+  border-color: #e8aaaa;
+}
+.products-panel .delete-product-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 @media (max-width: 900px) {
   .products-panel .product-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));

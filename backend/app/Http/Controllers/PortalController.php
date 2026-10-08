@@ -634,7 +634,7 @@ class PortalController
   }
   public function deleteProduct(int $id)
   {
-    DB::transaction(function () use ($id) {
+    $imagePath = DB::transaction(function () use ($id) {
       $p = DB::table('products')->where('id', $id)->lockForUpdate()->first();
       abort_unless($p, 404);
       foreach (['order_items', 'sale_items', 'purchase_items'] as $table) {
@@ -652,7 +652,11 @@ class PortalController
         );
       }
       DB::table('products')->where('id', $id)->delete();
+      return $p->image_path;
     });
+    if ($imagePath) {
+      \Illuminate\Support\Facades\Storage::disk('local')->delete($imagePath);
+    }
     return response()->json(['message' => 'Product deleted.']);
   }
   public function archiveProduct(int $id)

@@ -5744,7 +5744,12 @@ body {
 /* Product management actions: clear intent and readable labels. */
 .portal
   .products-panel
-  :is(.edit-product-button, .activate-product-button, .deactivate-product-button) {
+  :is(
+    .edit-product-button,
+    .activate-product-button,
+    .deactivate-product-button,
+    .delete-product-button
+  ) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5773,6 +5778,12 @@ body {
   color: #784500 !important;
   border-color: #e4bc65;
 }
+.portal .products-panel .delete-product-button,
+.portal .product-delete-dialog .delete-product-confirm {
+  background: #fde7e7 !important;
+  color: #8d2020 !important;
+  border-color: #e2a0a0;
+}
 [data-theme='dark'] .portal .products-panel .edit-product-button {
   background: #203552 !important;
   color: #bed8ff !important;
@@ -5788,15 +5799,31 @@ body {
   color: #ffdc91 !important;
   border-color: #a88343;
 }
+[data-theme='dark'] .portal .products-panel .delete-product-button,
+[data-theme='dark'] .portal .product-delete-dialog .delete-product-confirm {
+  background: #4a2222 !important;
+  color: #ffc1c1 !important;
+  border-color: #a95757;
+}
 .portal
   .products-panel
-  :is(.edit-product-button, .activate-product-button, .deactivate-product-button):focus-visible {
+  :is(
+    .edit-product-button,
+    .activate-product-button,
+    .deactivate-product-button,
+    .delete-product-button
+  ):focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
 }
 .portal
   .products-panel
-  :is(.edit-product-button, .activate-product-button, .deactivate-product-button):disabled {
+  :is(
+    .edit-product-button,
+    .activate-product-button,
+    .deactivate-product-button,
+    .delete-product-button
+  ):disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

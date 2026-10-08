@@ -217,7 +217,13 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(true),
     [editing, setEditing] = useState<Product | null>(null),
-    [showForm, setShowForm] = useState(false);
+    [showForm, setShowForm] = useState(false),
+    [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const deleteProductDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (deletingProduct) deleteProductDialog.current?.showModal();
+    else deleteProductDialog.current?.close();
+  }, [deletingProduct]);
   const [navigationDepth, setNavigationDepth] = useState(0);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -701,6 +707,23 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
       setShowForm(false);
       setEditing(null);
     }, 'Product saved.');
+  }
+  async function deleteProduct() {
+    if (!deletingProduct) return;
+    const product = deletingProduct;
+    await action(async () => {
+      await api(`/products/${product.id}/permanent`, { method: 'DELETE' });
+      setCart((current) => {
+        const next = { ...current };
+        delete next[product.id];
+        return next;
+      });
+      if (editing?.id === product.id) {
+        setShowForm(false);
+        setEditing(null);
+      }
+      setDeletingProduct(null);
+    }, `${product.name} deleted.`);
   }
   function openPayment(o: Order) {
     setCash('');
@@ -1246,6 +1269,18 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                             }
                           >
                             {p.active ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            type="button"
+                            className="delete-product-button"
+                            disabled={busy}
+                            onClick={() => {
+                              setError('');
+                              setDeletingProduct(p);
+                            }}
+                          >
+                            <Trash2 size={15} />
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -1917,6 +1952,39 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
           )}
         </div>
       )}
+      <dialog
+        ref={deleteProductDialog}
+        className="payment-dialog product-delete-dialog"
+        aria-labelledby="delete-product-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!busy) setDeletingProduct(null);
+        }}
+      >
+        <h2 id="delete-product-title">Delete product?</h2>
+        <p>
+          Permanently delete <strong>{deletingProduct?.name}</strong>? This cannot be undone.
+          Products used in orders, sales, purchases, or promotions must be deactivated instead.
+        </p>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="receipt-actions">
+          <button type="button" disabled={busy} onClick={() => setDeletingProduct(null)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="delete-product-confirm"
+            disabled={busy}
+            onClick={() => void deleteProduct()}
+          >
+            {busy ? 'Deleting…' : 'Delete product'}
+          </button>
+        </div>
+      </dialog>
       <dialog
         ref={deliveryDialog}
         className="payment-dialog"
