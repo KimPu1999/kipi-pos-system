@@ -5,6 +5,7 @@ export type Settings = {
   light_text: string;
   dark_background: string;
   dark_text: string;
+  font_family: 'dm_sans' | 'system' | 'manrope' | 'georgia' | 'monospace';
   font_size: number;
   font_weight: number;
   default_theme: 'light' | 'dark';
@@ -21,8 +22,6 @@ export function applySettings(s: Settings) {
         light_text: '#29231e',
         dark_background: '#131519',
         dark_text: '#f2f4f8',
-        font_size: 16,
-        font_weight: 600,
         default_theme: 'light' as const,
       }
     : s;
@@ -48,7 +47,14 @@ export function applySettings(s: Settings) {
       ? `${personalSize}px`
       : `${appearance.font_size}px`,
   );
-  root.style.removeProperty('--setting-font-family');
+  const fontFamilies: Record<Settings['font_family'], string> = {
+    dm_sans: "'DM Sans', sans-serif",
+    system: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    manrope: "'Manrope', 'DM Sans', sans-serif",
+    georgia: "Georgia, 'Times New Roman', serif",
+    monospace: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
+  };
+  root.style.setProperty('--setting-font-family', fontFamilies[appearance.font_family]);
   root.style.setProperty('--setting-font-weight', String(appearance.font_weight));
   document.title = s.store_name;
   try {

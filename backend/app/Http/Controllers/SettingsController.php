@@ -14,6 +14,7 @@ class SettingsController
         'light_text' => '#29231e',
         'dark_background' => '#131519',
         'dark_text' => '#f2f4f8',
+        'font_family' => 'dm_sans',
         'font_size' => 16,
         'font_weight' => 600,
         'default_theme' => 'light',
@@ -30,6 +31,7 @@ class SettingsController
   {
     $rules = [
       'store_name' => 'required|string|max:80',
+      'font_family' => 'required|in:dm_sans,system,manrope,georgia,monospace',
       'font_size' => 'required|integer|min:14|max:20',
       'font_weight' => 'required|integer|in:400,500,600,700',
       'default_theme' => 'required|in:light,dark',
