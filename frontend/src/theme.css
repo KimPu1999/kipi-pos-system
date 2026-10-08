@@ -3249,20 +3249,6 @@ body {
   font-size: var(--setting-font-size);
   font-weight: var(--setting-font-weight);
 }
-:root[data-custom-settings='true'] .portal {
-  font-family: var(--setting-font-family, 'DM Sans', sans-serif);
-  font-size: var(--setting-font-size, 16px);
-  font-weight: var(--setting-font-weight, 600);
-}
-:root[data-custom-settings='true'] .portal :is(button, input, select, textarea, dialog, table) {
-  font-family: inherit;
-}
-:root[data-custom-settings='true']
-  .portal
-  :is(p, label, button, input, select, textarea, td, th, small, span, a) {
-  font-size: inherit;
-  font-weight: inherit;
-}
 [data-custom-settings='true'] :is(.portal, .auth-card) :is(.primary, .checkout) {
   background: var(--primary);
   border-color: var(--primary);
@@ -5077,33 +5063,8 @@ body {
   border-color: var(--overview-border);
 }
 .portal .dashboard-view .welcome-store {
-  background: #fff8f1 !important;
-  border: 1px solid #efc69f;
-  color: #2f241d !important;
-  box-shadow: 0 8px 22px #6f2d001f;
-}
-.portal .dashboard-view .dashboard-welcome .welcome-store > span {
-  color: #9a4100 !important;
-}
-.portal .dashboard-view .dashboard-welcome .welcome-store > b {
-  color: #2f241d !important;
-}
-.portal .dashboard-view .dashboard-welcome .welcome-store > small {
-  color: #684b36 !important;
-}
-[data-theme='dark'] .portal .dashboard-view .welcome-store {
-  background: #30241c !important;
-  border-color: #8f613f;
-  color: #fff7ef !important;
-}
-[data-theme='dark'] .portal .dashboard-view .dashboard-welcome .welcome-store > span {
-  color: #ffbd80 !important;
-}
-[data-theme='dark'] .portal .dashboard-view .dashboard-welcome .welcome-store > b {
-  color: #fff7ef !important;
-}
-[data-theme='dark'] .portal .dashboard-view .dashboard-welcome .welcome-store > small {
-  color: #e1c4ac !important;
+  background: #ffffff18;
+  border-color: #ffffff45;
 }
 .portal .dashboard-view .metric-green .metric-icon {
   background: #dcf5e8;

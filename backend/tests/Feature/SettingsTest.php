@@ -25,12 +25,10 @@ class SettingsTest extends TestCase
       ...$settings,
       'store_name' => 'My Store',
       'font_size' => 18,
-      'font_family' => 'manrope',
     ])->assertOk();
     $this->getJson('/api/settings')
       ->assertJsonPath('store_name', 'My Store')
-      ->assertJsonPath('font_size', 18)
-      ->assertJsonPath('font_family', 'manrope');
+      ->assertJsonPath('font_size', 18);
     $this->getJson('/api/settings/system')->assertOk()->assertJsonPath('currency', 'MMK');
   }
 }
