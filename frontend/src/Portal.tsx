@@ -116,6 +116,28 @@ const money = (c: number) =>
     maximumFractionDigits: 2,
   }).format(c / 100);
 export default function Portal({ user, logout }: { user: User; logout: ReactNode }) {
+  const portalRef = useRef<HTMLDivElement>(null);
+  const portalHeaderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const portal = portalRef.current;
+    const header = portalHeaderRef.current;
+    if (!portal || !header) return;
+
+    const updateHeaderHeight = () => {
+      portal.style.setProperty('--portal-header-height', `${Math.ceil(header.offsetHeight)}px`);
+    };
+
+    updateHeaderHeight();
+    const observer = new ResizeObserver(updateHeaderHeight);
+    observer.observe(header);
+    window.addEventListener('orientationchange', updateHeaderHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', updateHeaderHeight);
+    };
+  }, []);
   const admin = user.role === 'admin';
   useEffect(() => {
     document.documentElement.dataset.portalRole = admin ? 'admin' : 'customer';
@@ -782,9 +804,10 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
       ];
   return (
     <div
+      ref={portalRef}
       className={`portal ${admin ? 'admin-portal' : 'customer-portal'} ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}
     >
-      <div className="portal-top">
+      <div ref={portalHeaderRef} className="portal-top">
         <div className="brand sidebar-logo-toggle header-brand-logo">
           <BrandLogo showPos={false} />
         </div>

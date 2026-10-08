@@ -855,3 +855,355 @@
     height: 20px;
   }
 }
+
+/* Fixed responsive shell: header stays visible; body uses remaining height. */
+@media screen {
+  html:has(.portal),
+  body:has(.portal),
+  #root:has(.portal) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .portal {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100dvh;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .portal > .portal-top {
+    position: relative;
+    z-index: 40;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+
+  .portal > .portal-content,
+  .portal > .app.pos-app {
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .portal > .portal-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portal > .app.pos-app {
+    overflow: hidden;
+  }
+
+  .portal .pos-app > main {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portal > .portal-footer {
+    grid-row: 3;
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+}
+
+@supports (height: 100svh) {
+  @media screen and (max-width: 1024px) {
+    .portal {
+      height: 100svh;
+      max-height: 100svh;
+    }
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .portal > .portal-top {
+    padding-inline: clamp(8px, 2.5vw, 16px) !important;
+  }
+
+  .portal > .portal-content,
+  .portal .pos-app > main {
+    padding-inline: clamp(12px, 3.5vw, 22px);
+  }
+
+  .portal .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .portal > .portal-content,
+  .portal .pos-app > main {
+    padding-inline: 12px !important;
+  }
+}
+
+/* Visible responsive scrolling and standard cursor behavior. */
+body,
+.portal,
+.portal > .portal-content,
+.portal .pos-app > main {
+  cursor: default;
+}
+
+.portal :is(button, a, summary, select, [role='button']) {
+  cursor: pointer;
+}
+
+.portal :is(input, textarea, [contenteditable='true']) {
+  cursor: text;
+}
+
+.portal :is(button, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+.portal :is(.portal-content, .pos-app > main, .portal-nav, .portal-nav-items, .table-wrap) {
+  scrollbar-width: auto !important;
+  scrollbar-color: color-mix(in srgb, var(--primary) 55%, var(--muted)) transparent;
+}
+
+.portal
+  :is(
+    .portal-content,
+    .pos-app > main,
+    .portal-nav,
+    .portal-nav-items,
+    .table-wrap
+  )::-webkit-scrollbar {
+  display: block !important;
+  width: 9px !important;
+  height: 9px !important;
+}
+
+.portal
+  :is(
+    .portal-content,
+    .pos-app > main,
+    .portal-nav,
+    .portal-nav-items,
+    .table-wrap
+  )::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.portal
+  :is(
+    .portal-content,
+    .pos-app > main,
+    .portal-nav,
+    .portal-nav-items,
+    .table-wrap
+  )::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 55%, var(--muted));
+  background-clip: padding-box;
+}
+
+@media screen and (max-width: 1024px) {
+  .portal > .portal-content,
+  .portal .pos-app > main,
+  .portal.sidebar-open > .portal-nav {
+    overflow-y: auto !important;
+    touch-action: pan-y;
+  }
+
+  .portal .table-wrap,
+  .portal .portal-nav-items {
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Tablet and mobile use normal document scrolling with a sticky header. */
+@media screen and (max-width: 1024px) {
+  html:has(.portal),
+  body:has(.portal),
+  #root:has(.portal) {
+    width: 100%;
+    height: auto !important;
+    min-height: 100%;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .portal {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    width: 100%;
+    height: auto !important;
+    min-height: 100svh;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .portal > .portal-top {
+    position: sticky !important;
+    top: 0;
+    z-index: 90;
+    grid-row: 1;
+  }
+
+  .portal > .portal-content,
+  .portal > .app.pos-app,
+  .portal .pos-app > main {
+    width: 100%;
+    height: auto !important;
+    min-height: 0;
+    max-height: none !important;
+    overflow: visible !important;
+    touch-action: auto;
+  }
+
+  .portal > .portal-content,
+  .portal > .app.pos-app {
+    grid-row: 2;
+  }
+
+  .portal > .portal-footer {
+    position: static;
+    grid-row: 3;
+  }
+
+  .portal.sidebar-open > .portal-nav {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    touch-action: pan-y;
+  }
+
+  .portal .table-wrap {
+    overflow-x: auto !important;
+    overflow-y: visible;
+    touch-action: pan-x;
+  }
+}
+
+/* Fixed header with body and footer in the same mobile page scroll. */
+@media screen and (max-width: 1024px) {
+  html:has(.portal),
+  body:has(.portal),
+  #root:has(.portal) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden !important;
+  }
+
+  .portal {
+    display: grid;
+    grid-template-rows: auto minmax(min-content, 1fr) auto !important;
+    align-content: start;
+    width: 100%;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box;
+    padding-top: var(--portal-header-height, 80px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portal > .portal-top {
+    position: fixed !important;
+    inset: 0 0 auto !important;
+    z-index: 90;
+    grid-row: 1;
+    align-self: start;
+    align-content: start;
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding-inline: clamp(12px, 3vw, 24px) !important;
+    transform: none !important;
+    background: var(--surface);
+  }
+
+  .portal > .portal-content,
+  .portal > .app.pos-app {
+    grid-row: 2;
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    touch-action: auto;
+  }
+
+  .portal > .portal-content {
+    box-sizing: border-box;
+    padding: 26px clamp(12px, 3vw, 24px) 32px !important;
+    overflow: visible !important;
+  }
+
+  .portal > .portal-content > .portal-heading {
+    margin-top: 0 !important;
+  }
+
+  .portal > .app.pos-app {
+    box-sizing: border-box;
+    padding-top: 18px;
+    overflow: visible !important;
+  }
+
+  .portal .pos-app > .sidebar {
+    position: relative;
+    z-index: 1;
+    margin: 0 !important;
+  }
+
+  .portal .pos-app > main {
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    touch-action: auto;
+  }
+
+  .portal > .portal-footer {
+    position: static !important;
+    grid-row: 3;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    flex-shrink: 0;
+  }
+}
+
+@supports (height: 100svh) {
+  @media screen and (max-width: 1024px) {
+    .portal {
+      height: 100svh !important;
+      max-height: 100svh !important;
+    }
+  }
+}
