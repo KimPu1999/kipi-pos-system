@@ -105,7 +105,7 @@ Validation failures return HTTP 422. Prices and receipt lines are copied from th
 ## MySQL
 
 Set `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `backend/.env`, create the database, then run migrations and seed. SQLite and MySQL support the same migrations. Runtime configuration uses UTC; the browser displays receipt dates in its local timezone.
-
+hello
 ## Layout
 
 - `frontend/src/`: typed React screens, API client and styles.
