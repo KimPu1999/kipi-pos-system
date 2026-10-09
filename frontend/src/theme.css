@@ -8566,12 +8566,12 @@ body {
   }
   .portal .notification-panel {
     position: fixed;
-    top: 62px;
+    top: calc(var(--portal-header-height, 62px) + 8px);
     right: 8px;
     left: 8px;
     width: auto;
     max-width: none;
-    max-height: calc(100dvh - 72px);
+    max-height: calc(100dvh - var(--portal-header-height, 62px) - 16px);
   }
 }
 @media screen and (max-width: 340px) {
