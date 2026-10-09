@@ -34,6 +34,20 @@ Route::middleware('web')->group(function () {
     );
     Route::get('/table-choices', [\App\Http\Controllers\DiningTableController::class, 'choices']);
     Route::get('/catalog', [\App\Http\Controllers\PortalController::class, 'catalog']);
+    Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index']);
+    Route::get('/wishlist/notifications', [
+      \App\Http\Controllers\WishlistNotificationController::class,
+      'index',
+    ]);
+    Route::post('/wishlist/notifications/read', [
+      \App\Http\Controllers\WishlistNotificationController::class,
+      'read',
+    ]);
+    Route::post('/wishlist/{product}', [\App\Http\Controllers\WishlistController::class, 'store']);
+    Route::delete('/wishlist/{product}', [
+      \App\Http\Controllers\WishlistController::class,
+      'destroy',
+    ]);
     Route::get('/customer/rewards', [
       \App\Http\Controllers\CustomerRewardsController::class,
       'index',
@@ -117,6 +131,8 @@ Route::middleware('web')->group(function () {
       ]);
       Route::post('/employees', [\App\Http\Controllers\EmployeeController::class, 'store']);
       Route::put('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'update']);
+
+      Route::delete('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'destroy']);
       Route::post('/employees/{id}/check-in', [
         \App\Http\Controllers\EmployeeController::class,
         'checkIn',
@@ -136,6 +152,10 @@ Route::middleware('web')->group(function () {
       Route::put('/employees/{id}/salary-payments/{paymentId}', [
         \App\Http\Controllers\EmployeeController::class,
         'updateSalaryPayment',
+      ]);
+      Route::put('/employee-shifts/{id}', [
+        \App\Http\Controllers\EmployeeController::class,
+        'updateShift',
       ]);
       Route::delete('/employee-shifts/{id}', [
         \App\Http\Controllers\EmployeeController::class,

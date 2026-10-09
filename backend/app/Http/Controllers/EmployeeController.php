@@ -23,13 +23,26 @@ class EmployeeController
       ->where('month', $month)
       ->get()
       ->keyBy('employee_id');
+    $lastAttendance = DB::table('employee_shifts')
+      ->where('source', 'attendance')
+      ->orderByDesc('starts_at')
+      ->get()
+      ->groupBy('employee_id')
+      ->map->first();
     $employees = DB::table('employees')
       ->orderBy('name')
       ->get()
-      ->map(function ($e) use ($shifts, $payments) {
+      ->map(function ($e) use ($shifts, $payments, $lastAttendance) {
         $e->worked_minutes = $shifts->where('employee_id', $e->id)->sum('worked_minutes');
         $e->checked_in_at = $e->checked_in_at
           ? CarbonImmutable::parse($e->checked_in_at, 'UTC')->toIso8601String()
+          : null;
+        $att = $lastAttendance[$e->id] ?? null;
+        $e->last_attendance = $att
+          ? [
+            'id' => $att->id,
+            'starts_at' => CarbonImmutable::parse($att->starts_at, 'UTC')->toIso8601String(),
+          ]
           : null;
         $e->salary_payment = $payments->get($e->id);
         return $e;
@@ -122,6 +135,24 @@ class EmployeeController
   {
     abort_unless(DB::table('employees')->where('id', $id)->exists(), 404);
     return $this->save($r, $id);
+  }
+  public function destroy(int $id)
+  {
+    return DB::transaction(function () use ($id) {
+      $employee = DB::table('employees')->where('id', $id)->lockForUpdate()->first();
+      abort_unless($employee, 404);
+      if ($employee->checked_in_at) {
+        throw ValidationException::withMessages([
+          'employee' => 'Check out this employee before deleting.',
+        ]);
+      }
+      if (DB::table('employee_salary_payments')->where('employee_id', $id)->exists()) {
+        abort(409, 'This employee has salary payments with linked cash-out entries and cannot be deleted.');
+      }
+      DB::table('employee_shifts')->where('employee_id', $id)->delete();
+      DB::table('employees')->where('id', $id)->delete();
+      return response()->json(['message' => 'Employee deleted.']);
+    });
   }
   private function save(Request $r, ?int $id = null)
   {
@@ -259,6 +290,7 @@ class EmployeeController
         'ends_at' => $end,
         'break_minutes' => $data['break_minutes'],
         'worked_minutes' => $minutes - $data['break_minutes'],
+        'source' => 'attendance',
         'created_at' => $end,
         'updated_at' => $end,
       ]);
@@ -275,6 +307,71 @@ class EmployeeController
   {
     abort_unless(DB::table('employee_shifts')->where('id', $id)->delete(), 404);
     return response()->json(['message' => 'Shift removed.']);
+  }
+  public function updateShift(Request $r, int $shiftId)
+  {
+    $data = $r->validate([
+      'date' => 'required|date_format:Y-m-d',
+      'start_time' => 'required|date_format:H:i',
+      'end_time' => 'required|date_format:H:i',
+      'overnight' => 'required|boolean',
+      'break_minutes' => 'required|integer|min:0|max:1440',
+    ]);
+    $shift = DB::table('employee_shifts')->where('id', $shiftId)->first();
+    abort_unless($shift, 404);
+    $start = CarbonImmutable::parse($data['date'] . ' ' . $data['start_time'], 'Asia/Yangon');
+    $end = CarbonImmutable::parse($data['date'] . ' ' . $data['end_time'], 'Asia/Yangon');
+    if ($data['overnight']) {
+      $end = $end->addDay();
+    }
+    $minutes = (int) $start->diffInMinutes($end, false);
+    if ($minutes <= 0 || $minutes > 1440 || $data['break_minutes'] >= $minutes) {
+      throw ValidationException::withMessages([
+        'end_time' => 'Shift must be between 1 minute and 24 hours, with a shorter break.',
+      ]);
+    }
+    DB::transaction(function () use ($shift, $shiftId, $start, $end, $minutes, $data) {
+      $employee = DB::table('employees')
+        ->where('id', $shift->employee_id)
+        ->lockForUpdate()
+        ->first();
+      abort_unless($employee, 404);
+      if (
+        $employee->checked_in_at &&
+        $end->utc()->greaterThan(CarbonImmutable::parse($employee->checked_in_at, 'UTC'))
+      ) {
+        throw ValidationException::withMessages([
+          'date' => 'This shift overlaps the current check-in.',
+        ]);
+      }
+      if (
+        DB::table('employee_shifts')
+          ->where('employee_id', $shift->employee_id)
+          ->where('id', '!=', $shiftId)
+          ->where('starts_at', '<', $end->utc())
+          ->where('ends_at', '>', $start->utc())
+          ->exists()
+      ) {
+        throw ValidationException::withMessages([
+          'date' => 'This shift overlaps an existing shift.',
+        ]);
+      }
+      DB::table('employee_shifts')
+        ->where('id', $shiftId)
+        ->update([
+          'starts_at' => $start->utc(),
+          'ends_at' => $end->utc(),
+          'break_minutes' => $data['break_minutes'],
+          'worked_minutes' => $minutes - $data['break_minutes'],
+          'updated_at' => now(),
+        ]);
+    });
+    $updated = DB::table('employee_shifts')->find($shiftId);
+    return response()->json([
+      ...(array) $updated,
+      'starts_at' => CarbonImmutable::parse($updated->starts_at, 'UTC')->toIso8601String(),
+      'ends_at' => CarbonImmutable::parse($updated->ends_at, 'UTC')->toIso8601String(),
+    ]);
   }
   public function paySalary(Request $r, int $id)
   {

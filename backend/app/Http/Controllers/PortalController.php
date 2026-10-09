@@ -51,6 +51,42 @@ class PortalController
   {
     return response()->json(DB::table('products')->where('active', true)->orderBy('name')->get());
   }
+  private function notifyBackInStock(int $productId): void
+  {
+    $product = DB::table('products')->where('id', $productId)->first();
+    if (!$product || (int) $product->stock <= 0) {
+      return;
+    }
+    $customers = DB::table('wishlists')
+      ->where('product_id', $productId)
+      ->pluck('user_id')
+      ->unique()
+      ->values();
+    if ($customers->isEmpty()) {
+      return;
+    }
+    $now = now();
+    foreach ($customers as $userId) {
+      DB::table('wishlist_notifications')->insert([
+        'user_id' => $userId,
+        'product_id' => $productId,
+        'type' => 'back_in_stock',
+        'customer_count' => 0,
+        'created_at' => $now,
+        'updated_at' => $now,
+      ]);
+    }
+    foreach (DB::table('users')->where('role', 'admin')->pluck('id') as $adminId) {
+      DB::table('wishlist_notifications')->insert([
+        'user_id' => $adminId,
+        'product_id' => $productId,
+        'type' => 'back_in_stock',
+        'customer_count' => $customers->count(),
+        'created_at' => $now,
+        'updated_at' => $now,
+      ]);
+    }
+  }
   private function order(int $id): object
   {
     $o = DB::table('orders')
@@ -624,6 +660,7 @@ class PortalController
     if ($path) {
       $d['image_path'] = $path;
     }
+    $previousStock = (int) DB::table('products')->where('id', $id)->value('stock');
     try {
       $query = DB::table('products')->where('id', $id);
       if ($expected !== null) {
@@ -635,6 +672,9 @@ class PortalController
         409,
         'Stock changed since you opened this form. Refresh inventory and try again.',
       );
+      if ($previousStock === 0 && (int) $d['stock'] > 0) {
+        $this->notifyBackInStock($id);
+      }
     } catch (\Throwable $e) {
       if ($path) {
         \Illuminate\Support\Facades\Storage::disk('local')->delete($path);
@@ -667,6 +707,9 @@ class PortalController
             ->where('stock', $d['expected_stock'])
             ->update(['stock' => $d['stock'], 'updated_at' => now()]);
           abort_unless($updated, 409, 'Stock changed. Refresh inventory and try again.');
+          if ((int) $p->stock === 0 && (int) $d['stock'] > 0) {
+            $this->notifyBackInStock($id);
+          }
         }
         return DB::table('products')->find($id);
       }, 3),

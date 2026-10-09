@@ -8,12 +8,15 @@ class PromotionController
   private function present(object $p): object
   {
     $p->product_ids = $p->product_ids ? json_decode($p->product_ids, true) : [];
+    $p->categories = $p->categories ? json_decode($p->categories, true) : [];
     return $p;
   }
-  private function normalizeProducts(Request $r): void
+  private function normalizeScope(Request $r): void
   {
-    if (is_string($r->input('product_ids'))) {
-      $r->merge(['product_ids' => json_decode($r->input('product_ids'), true)]);
+    foreach (['product_ids', 'categories'] as $key) {
+      if (is_string($r->input($key))) {
+        $r->merge([$key => json_decode($r->input($key), true)]);
+      }
     }
   }
 
@@ -29,7 +32,7 @@ class PromotionController
   }
   public function store(Request $r)
   {
-    $this->normalizeProducts($r);
+    $this->normalizeScope($r);
     $r->merge(['code' => strtoupper(trim((string) $r->input('code')))]);
     if (!$r->filled('code')) {
       $r->merge([
@@ -44,11 +47,16 @@ class PromotionController
       'expires_on' => 'nullable|date_format:Y-m-d|after_or_equal:today',
       'product_ids' => 'sometimes|array',
       'product_ids.*' => 'integer|distinct|exists:products,id',
+      'categories' => 'sometimes|array',
+      'categories.*' => 'required|string|distinct|max:60',
       'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
     ]);
     unset($d['image']);
     if (array_key_exists('product_ids', $d)) {
       $d['product_ids'] = json_encode(array_map('intval', $d['product_ids']));
+    }
+    if (array_key_exists('categories', $d)) {
+      $d['categories'] = json_encode(array_values($d['categories']));
     }
     $path = $r->hasFile('image') ? $r->file('image')->store('promotions', 'local') : null;
     if ($path) {
@@ -104,7 +112,7 @@ class PromotionController
   }
   public function update(Request $r, int $id)
   {
-    $this->normalizeProducts($r);
+    $this->normalizeScope($r);
     $p = DB::table('promotions')->whereNull('deleted_at')->find($id);
     abort_unless($p, 404);
     $r->merge(['code' => strtoupper(trim((string) $r->input('code')))]);
@@ -121,11 +129,16 @@ class PromotionController
       'expires_on' => 'nullable|date_format:Y-m-d|after_or_equal:today',
       'product_ids' => 'sometimes|array',
       'product_ids.*' => 'integer|distinct|exists:products,id',
+      'categories' => 'sometimes|array',
+      'categories.*' => 'required|string|distinct|max:60',
       'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
     ]);
     unset($d['image']);
     if (array_key_exists('product_ids', $d)) {
       $d['product_ids'] = json_encode(array_map('intval', $d['product_ids']));
+    }
+    if (array_key_exists('categories', $d)) {
+      $d['categories'] = json_encode(array_values($d['categories']));
     }
     $path = $r->hasFile('image') ? $r->file('image')->store('promotions', 'local') : null;
     if ($path) {
@@ -188,11 +201,28 @@ class PromotionController
       ]);
     }
     $ids = $p->product_ids ? json_decode($p->product_ids, true) : [];
+    $categories = $p->categories ? json_decode($p->categories, true) : [];
+    $eligibleIds = array_map('intval', $ids);
+    $hasScope = (bool) ($ids || $categories);
+    if ($categories) {
+      $lineIds = array_values(array_unique(array_map(fn($line) => (int) $line['product_id'], $lines)));
+      $categoryById = DB::table('products')
+        ->whereIn('id', $lineIds)
+        ->pluck('category', 'id')
+        ->map(fn($c) => trim((string) $c))
+        ->all();
+      foreach ($categoryById as $productId => $category) {
+        if (in_array($category, $categories, true)) {
+          $eligibleIds[] = (int) $productId;
+        }
+      }
+      $eligibleIds = array_values(array_unique($eligibleIds));
+    }
     $eligible = $subtotal;
-    if ($ids) {
+    if ($hasScope) {
       $eligibleLines = array_filter(
         $lines,
-        fn($line) => in_array((int) $line['product_id'], $ids, true),
+        fn($line) => in_array((int) $line['product_id'], $eligibleIds, true),
       );
       if (!$eligibleLines) {
         throw ValidationException::withMessages([

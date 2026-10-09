@@ -20,6 +20,7 @@ type Employee = {
   active: boolean | number;
   worked_minutes: number;
   checked_in_at: string | null;
+  last_attendance: { id: number; starts_at: string } | null;
   salary_payment: SalaryPayment | null;
 };
 type Shift = {
@@ -168,6 +169,26 @@ export default function Employees({ navigate }: { navigate: (page: string) => vo
         : 'Salary paid. Cash out was added automatically.',
     );
   }
+  function deleteAttendance(e: Employee) {
+    const att = e.last_attendance;
+    if (!att) return;
+    if (window.confirm('Delete the most recent attendance record for this employee?'))
+      void action(
+        () => api(`/employee-shifts/${att.id}`, { method: 'DELETE' }),
+        () => {},
+        'Attendance removed.',
+      );
+  }
+  function deleteEmployee(e: Employee) {
+    if (window.confirm(`Delete ${e.name}? Their recorded shifts will be removed.`))
+      void action(
+        () => api(`/employees/${e.id}`, { method: 'DELETE' }),
+        () => {
+          if (editing?.id === e.id) setEditing(null);
+        },
+        'Employee deleted.',
+      );
+  }
   return (
     <section className="employee-workspace">
       {paying && (
@@ -263,7 +284,7 @@ export default function Employees({ navigate }: { navigate: (page: string) => vo
       )}
       {checkout && (
         <form
-          className="panel"
+          className="panel employee-checkout-form"
           onSubmit={(e) => {
             e.preventDefault();
             const d = new FormData(e.currentTarget);
@@ -284,12 +305,14 @@ export default function Employees({ navigate }: { navigate: (page: string) => vo
             Unpaid break (minutes)
             <input name="break_minutes" type="number" required min={0} step={1} defaultValue={0} />
           </label>
-          <button className="primary" disabled={busy}>
-            Confirm check out
-          </button>
-          <button type="button" disabled={busy} onClick={() => setCheckout(null)}>
-            Cancel
-          </button>
+          <div className="cash-form-actions">
+            <button className="primary" disabled={busy}>
+              Confirm check out
+            </button>
+            <button type="button" disabled={busy} onClick={() => setCheckout(null)}>
+              Cancel
+            </button>
+          </div>
         </form>
       )}
       {error && (
@@ -588,34 +611,58 @@ export default function Employees({ navigate }: { navigate: (page: string) => vo
                     {e.checked_in_at ? (
                       <>
                         <small>In: {dateTime(e.checked_in_at)}</small>
-                        <button disabled={busy || loading} onClick={() => setCheckout(e)}>
+                        <button
+                          disabled={busy || loading}
+                          onClick={() => {
+                            setCheckout(e);
+                            requestAnimationFrame(() =>
+                              requestAnimationFrame(() =>
+                                document
+                                  .querySelector<HTMLElement>('.employee-checkout-form')
+                                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                              ),
+                            );
+                          }}
+                        >
                           Check out
                         </button>
                       </>
                     ) : (
-                      <button
-                        disabled={busy || loading || !e.active}
-                        onClick={() =>
-                          void action(
-                            () => api(`/employees/${e.id}/check-in`, { method: 'POST' }),
-                            () => {},
-                            'Employee checked in.',
-                          )
-                        }
-                      >
-                        Check in
-                      </button>
+                      <>
+                        <button
+                          disabled={busy || loading || !e.active}
+                          onClick={() =>
+                            void action(
+                              () => api(`/employees/${e.id}/check-in`, { method: 'POST' }),
+                              () => {},
+                              'Employee checked in.',
+                            )
+                          }
+                        >
+                          Check in
+                        </button>
+                        {e.last_attendance && (
+                          <>
+                            <small>Last: {dateTime(e.last_attendance.starts_at)}</small>
+                            <button
+                              className="employee-attendance-delete"
+                              disabled={busy || loading}
+                              onClick={() => deleteAttendance(e)}
+                            >
+                              Delete attendance
+                            </button>
+                          </>
+                        )}
+                      </>
                     )}
                   </td>
                   <td>
                     <button
+                      className="employee-delete"
                       disabled={busy}
-                      onClick={() => {
-                        setEditing(e);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
+                      onClick={() => deleteEmployee(e)}
                     >
-                      Edit
+                      Delete
                     </button>
                   </td>
                 </tr>

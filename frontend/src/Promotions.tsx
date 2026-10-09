@@ -2,7 +2,7 @@ import CopyCode from './CopyCode';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from './api';
 export type Promotion = {
-  product_ids: number[];
+  categories: string[];
   id: number;
   code: string;
   name: string;
@@ -15,16 +15,17 @@ const promotionCode = () =>
   `PROMO-${crypto.randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
 export default function Promotions() {
   const [products, setProducts] = useState<
-    { id: number; name: string; active: boolean | number }[]
+    { id: number; name: string; category: string; active: boolean | number }[]
   >([]);
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [items, setItems] = useState<Promotion[]>([]),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
+  const categories = [...new Set(products.map((p) => p.category.trim()).filter(Boolean))].sort();
   function prepare(d: FormData) {
-    d.set('product_ids', JSON.stringify(d.getAll('product_ids[]').map(Number)));
-    d.delete('product_ids[]');
+    d.set('categories', JSON.stringify(d.getAll('categories[]')));
+    d.delete('categories[]');
     const f = d.get('image');
     if (f instanceof File && !f.size) d.delete('image');
     return d;
@@ -32,7 +33,7 @@ export default function Promotions() {
   async function load() {
     const [promo, items] = await Promise.all([
       api<Promotion[]>('/promotions'),
-      api<{ id: number; name: string; active: boolean | number }[]>('/products'),
+      api<{ id: number; name: string; category: string; active: boolean | number }[]>('/products'),
     ]);
     setItems(promo);
     setProducts(items);
@@ -166,23 +167,23 @@ export default function Promotions() {
           Expiry date (optional)
           <input defaultValue={editing?.expires_on || ''} name="expires_on" type="date" />
         </label>
-        <fieldset className="promotion-products">
-          <legend>Eligible products</legend>
-          <p>Select products to discount. Leave all unchecked for a store-wide offer.</p>
+        <fieldset className="promotion-categories">
+          <legend>Eligible categories</legend>
+          <p>Select categories to discount. Leave all unchecked for a store-wide offer.</p>
           <div>
-            {products.map((p) => (
-              <label key={p.id}>
+            {categories.map((c) => (
+              <label key={c}>
                 <input
                   type="checkbox"
-                  name="product_ids[]"
-                  value={p.id}
-                  defaultChecked={!!editing?.product_ids.includes(p.id)}
+                  name="categories[]"
+                  value={c}
+                  defaultChecked={!!editing?.categories.includes(c)}
                   disabled={busy}
                 />
-                {p.name}
-                {!p.active && ' (inactive)'}
+                {c}
               </label>
             ))}
+            {!categories.length && <span className="muted">No categories available yet.</span>}
           </div>
         </fieldset>
         <label className="image-upload">
@@ -212,7 +213,7 @@ export default function Promotions() {
               <th>Name</th>
               <th>Code</th>
               <th>Discount</th>
-              <th>Products</th>
+              <th>Categories</th>
               <th>Expires</th>
               <th>Status</th>
               <th>Actions</th>
@@ -250,13 +251,7 @@ export default function Promotions() {
                   <CopyCode key={p.code} code={p.code} />
                 </td>
                 <td>{p.percent}%</td>
-                <td>
-                  {p.product_ids.length
-                    ? p.product_ids
-                        .map((id) => products.find((x) => x.id === id)?.name || `#${id}`)
-                        .join(', ')
-                    : 'All products'}
-                </td>
+                <td>{p.categories.length ? p.categories.join(', ') : 'All products'}</td>
                 <td>{p.expires_on || 'No expiry'}</td>
                 <td>
                   {!p.active

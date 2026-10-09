@@ -14,6 +14,7 @@ import {
   NotebookIcon,
   Menu,
   X,
+  Heart,
 } from './icons';
 import { api, type User } from './api';
 import App from './App';
@@ -41,6 +42,18 @@ import Promotions, { type Promotion } from './Promotions';
 import OrderContactFields, { type OrderContact } from './OrderContactFields';
 import CustomerDashboard from './CustomerDashboard';
 import DashboardView from './Dashboard';
+import Wishlist from './Wishlist';
+type WishlistNotice = {
+  id: number;
+  product_id: number;
+  type: string;
+  customer_count: number;
+  read_at: string | null;
+  created_at: string;
+  product_name: string;
+  product_emoji: string;
+  product_category: string;
+};
 type Product = {
   id: number;
   name: string;
@@ -214,6 +227,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
         'pos',
         'pos-inventory',
         'pos-sales',
+        'pos-wishlist',
         'bag',
         'tables',
         'products',
@@ -231,7 +245,18 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
         'faq',
         'privacy',
       ]
-    : ['home', 'shop', 'bag', 'orders', 'rewards', 'account', 'settings', 'faq', 'privacy'];
+    : [
+        'home',
+        'shop',
+        'bag',
+        'wishlist',
+        'orders',
+        'rewards',
+        'account',
+        'settings',
+        'faq',
+        'privacy',
+      ];
   const initialPage = () => {
     const page = location.hash.slice(1);
     return allowedPages.includes(page) ? page : admin ? 'dashboard' : 'home';
@@ -239,6 +264,9 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
   const [tab, setActiveTab] = useState(initialPage),
     [products, setProducts] = useState<Product[]>([]),
     [orders, setOrders] = useState<Order[]>([]),
+    [wishlist, setWishlist] = useState<number[]>([]),
+    [wishlistNotices, setWishlistNotices] = useState<WishlistNotice[]>([]),
+    [wishlistUnread, setWishlistUnread] = useState(0),
     [dashboard, setDashboard] = useState<Dashboard | null>(null),
     [search, setSearch] = useState(''),
     [filter, setFilter] = useState('All'),
@@ -314,7 +342,18 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
           'faq',
           'privacy',
         ]
-      : ['home', 'shop', 'bag', 'orders', 'rewards', 'account', 'settings', 'faq', 'privacy'];
+      : [
+          'home',
+          'shop',
+          'bag',
+          'wishlist',
+          'orders',
+          'rewards',
+          'account',
+          'settings',
+          'faq',
+          'privacy',
+        ];
     const pop = (event: PopStateEvent) => {
       if (event.state?.kipiUser !== user.id || !allowed.includes(event.state.kipiTab)) return;
       setActiveTab(event.state.kipiTab);
@@ -553,15 +592,41 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     const date = value instanceof Date ? value : new Date(value);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   };
-  const [orderDay, setOrderDay] = useState<string | null>(() => dayKey(new Date()));
-  const changeOrderDay = (amount: number) =>
-    setOrderDay((current) => {
-      const date = current ? new Date(`${current}T12:00:00`) : new Date();
-      date.setDate(date.getDate() + amount);
-      return dayKey(date);
+  const monthKey = (value: string | Date) => dayKey(value).slice(0, 7);
+  const yearKey = (value: string | Date) => dayKey(value).slice(0, 4);
+  const weekKey = (value: string | Date) => {
+    const date = value instanceof Date ? value : new Date(value);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    return dayKey(date);
+  };
+  type OrderRange = 'all' | 'day' | 'week' | 'month' | 'year';
+  const [orderRange, setOrderRange] = useState<OrderRange>('day');
+  const [orderAnchor, setOrderAnchor] = useState<Date>(() => new Date());
+  const inOrderPeriod = (createdAt: string | Date) =>
+    orderRange === 'all'
+      ? true
+      : orderRange === 'day'
+        ? dayKey(createdAt) === dayKey(orderAnchor)
+        : orderRange === 'week'
+          ? weekKey(createdAt) === weekKey(orderAnchor)
+          : orderRange === 'month'
+            ? monthKey(createdAt) === monthKey(orderAnchor)
+            : yearKey(createdAt) === yearKey(orderAnchor);
+  const shiftOrderPeriod = (amount: number) =>
+    setOrderAnchor((current) => {
+      const date = new Date(current);
+      if (orderRange === 'week') date.setDate(date.getDate() + amount * 7);
+      else if (orderRange === 'month') date.setMonth(date.getMonth() + amount);
+      else if (orderRange === 'year') date.setFullYear(date.getFullYear() + amount);
+      else date.setDate(date.getDate() + amount);
+      return date;
     });
+  const focusOrderPeriod = (range: OrderRange) => {
+    setOrderRange(range);
+    setOrderAnchor(new Date());
+  };
   const [orderPage, setOrderPage] = useState(1);
-  useEffect(() => setOrderPage(1), [orderFilter, orderSearch, orderDay, tab]);
+  useEffect(() => setOrderPage(1), [orderFilter, orderSearch, orderRange, orderAnchor, tab]);
   const [productPage, setProductPage] = useState(1);
   useEffect(() => setProductPage(1), [search, tab]);
   const [payingOrder, setPayingOrder] = useState<Order | null>(null);
@@ -597,7 +662,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     orderDiscountValid &&
     amount >= orderPayTotal &&
     amount <= 1000000000;
-  const dateOrders = orders.filter((o) => orderDay === null || dayKey(o.created_at) === orderDay);
+  const dateOrders = orders.filter((o) => inOrderPeriod(o.created_at));
   const visibleOrders = dateOrders.filter(
     (o) =>
       (orderFilter === 'All' || o.status === orderFilter) &&
@@ -609,6 +674,32 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
   const orderPages = Math.max(1, Math.ceil(visibleOrders.length / 10));
   const currentOrderPage = Math.min(orderPage, orderPages);
   const pageOrders = visibleOrders.slice((currentOrderPage - 1) * 10, currentOrderPage * 10);
+  const orderWeekLabel = () => {
+    const date = new Date(orderAnchor);
+    date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+    const start = new Date(date);
+    date.setDate(date.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `${fmt(start)} – ${fmt(date)}, ${date.getFullYear()}`;
+  };
+  const orderPeriodLabel =
+    orderRange === 'all'
+      ? 'All order dates'
+      : orderRange === 'day'
+        ? new Date(orderAnchor).toLocaleDateString(undefined, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })
+        : orderRange === 'week'
+          ? orderWeekLabel()
+          : orderRange === 'month'
+            ? new Date(orderAnchor).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'long',
+              })
+            : String(new Date(orderAnchor).getFullYear());
   const adminProductItems = products.filter((p) =>
     `${p.name} ${p.sku}`.toLowerCase().includes(search.toLowerCase()),
   );
@@ -618,17 +709,22 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
 
   async function load() {
     const version = ++loadVersion.current;
-    const [p, o, d, promo] = await Promise.all([
+    const [p, o, d, promo, wl, wn] = await Promise.all([
       api<Product[]>(admin ? '/products' : '/catalog'),
       api<Order[]>('/orders'),
       admin ? api<Dashboard>('/admin/dashboard') : Promise.resolve(null),
       api<Promotion[]>('/promotions'),
+      api<number[]>('/wishlist'),
+      api<{ unread: number; notifications: WishlistNotice[] }>('/wishlist/notifications'),
     ]);
     if (version !== loadVersion.current) return;
     setProducts(p);
     setOrders(o);
     setDashboard(d);
     setPromotions(promo);
+    setWishlist(wl);
+    setWishlistNotices(wn.notifications);
+    setWishlistUnread(wn.unread);
     setLastSynced(new Date());
   }
   useEffect(() => {
@@ -692,6 +788,52 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     const p = products.find((p) => p.id === Number(id));
     return !p || !p.active || cart[Number(id)] > p.stock;
   });
+  async function toggleWishlist(id: number) {
+    setWishlist((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+    );
+    try {
+      await api(wishlist.includes(id) ? `/wishlist/${id}` : `/wishlist/${id}`, {
+        method: wishlist.includes(id) ? 'DELETE' : 'POST',
+      });
+    } catch (e) {
+      setWishlist((current) =>
+        current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+      );
+      setError(e instanceof Error ? e.message : 'Could not update your wishlist.');
+    }
+  }
+  useEffect(() => {
+    if (tab !== 'wishlist' || !wishlistUnread) return;
+    void (async () => {
+      setWishlistUnread(0);
+      setWishlistNotices((n) => n.map((x) => ({ ...x, read_at: new Date().toISOString() })));
+      try {
+        await api('/wishlist/notifications/read', { method: 'POST' });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not clear wishlist notifications.');
+      }
+    })();
+  }, [tab]);
+  function changeWishlistItem(id: number, delta: number) {
+    const product = products.find((p) => p.id === id);
+    if (!product?.active) return;
+    setCart((current) => {
+      const next = { ...current };
+      const quantity = (current[id] || 0) + delta;
+      if (quantity <= 0) delete next[id];
+      else if (quantity <= product.stock) next[id] = quantity;
+      return next;
+    });
+    if (delta > 0) setSizes((current) => (current[id] ? current : { ...current, [id]: 'medium' }));
+    else if ((cart[id] || 0) + delta <= 0) {
+      setSizes((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    }
+  }
   async function place() {
     if (
       loading ||
@@ -881,6 +1023,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
         ['home', 'Dashboard', BarChart3],
         ['shop', 'Shop', ShoppingBag],
         ['bag', 'Order bag', ShoppingBag],
+        ['wishlist', 'Wishlist', Heart],
         ['orders', 'My orders', Package],
         ['rewards', 'Points & purchases', ShoppingBag],
         ['account', 'My account', Users],
@@ -1017,6 +1160,14 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                   {notificationUnread}
                 </span>
               )}
+              {key === 'wishlist' && wishlistUnread > 0 && (
+                <span
+                  className="sidebar-notification-count"
+                  aria-label={`${wishlistUnread} unread wishlist notifications`}
+                >
+                  {wishlistUnread}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1035,7 +1186,15 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
           logout={logout}
           visible={tab.startsWith('pos') || tab === 'bag'}
           bagPage={tab === 'bag'}
-          page={tab === 'pos-inventory' ? 'inventory' : tab === 'pos-sales' ? 'sales' : 'register'}
+          page={
+            tab === 'pos-inventory'
+              ? 'inventory'
+              : tab === 'pos-sales'
+                ? 'sales'
+                : tab === 'pos-wishlist'
+                  ? 'wishlist'
+                  : 'register'
+          }
           onNavigate={(page) => setTab(page === 'register' ? 'pos' : `pos-${page}`)}
           onCartCount={setAdminBagCount}
           onContinue={() => setTab('pos')}
@@ -1463,6 +1622,22 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
             />
           )}
           {tab === 'rewards' && !admin && <CustomerRewards />}
+          {tab === 'wishlist' && !admin && (
+            <Wishlist
+              products={products}
+              wishlist={wishlist}
+              cart={cart}
+              sizes={sizes}
+              notices={wishlistNotices}
+              onToggle={toggleWishlist}
+              onAdd={changeWishlistItem}
+              onBrowse={() => {
+                setTab('shop');
+                setFilter('All');
+                setSearch('');
+              }}
+            />
+          )}
           {tab === 'customers' && admin && dashboard && (
             <AdminCustomers people={dashboard.people} orders={orders} />
           )}
@@ -1505,6 +1680,8 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
               setCart={setCart}
               sizes={sizes}
               setSizes={setSizes}
+              wishlist={wishlist}
+              onToggleWishlist={toggleWishlist}
               search={search}
               setSearch={setSearch}
               category={filter}
@@ -1535,44 +1712,75 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                   />
                 </label>
               )}
-              <div className="order-day-navigation" role="group" aria-label="Choose order day">
-                <button className="secondary" onClick={() => changeOrderDay(-1)}>
-                  ← Previous day
+              <div className="order-day-navigation" role="group" aria-label="Choose order period">
+                <button
+                  className="secondary"
+                  onClick={() => shiftOrderPeriod(-1)}
+                  disabled={orderRange === 'all'}
+                >
+                  ← Previous {orderRange === 'all' ? 'period' : orderRange}
                 </button>
                 <div>
-                  <span>{orderDay ? 'Orders for day' : 'Complete history'}</span>
-                  <strong>
-                    {orderDay
-                      ? new Date(`${orderDay}T12:00:00`).toLocaleDateString(undefined, {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : 'All order dates'}
-                  </strong>
+                  <span>
+                    {orderRange === 'all' ? 'Complete history' : `Orders for ${orderRange}`}
+                  </span>
+                  <strong>{orderPeriodLabel}</strong>
                   <small>
                     {dateOrders.length} {dateOrders.length === 1 ? 'order' : 'orders'}
                   </small>
                 </div>
                 <button
                   className="secondary"
-                  onClick={() => changeOrderDay(1)}
-                  disabled={!orderDay || orderDay === dayKey(new Date())}
+                  onClick={() => shiftOrderPeriod(1)}
+                  disabled={orderRange === 'all' || inOrderPeriod(new Date())}
                 >
-                  Next day →
+                  Next {orderRange === 'all' ? 'period' : orderRange} →
                 </button>
                 <button
-                  className={orderDay === null ? 'primary' : 'secondary'}
-                  onClick={() => setOrderDay(null)}
-                >
-                  All dates
-                </button>
-                <button
-                  className={orderDay === dayKey(new Date()) ? 'primary' : 'secondary'}
-                  onClick={() => setOrderDay(dayKey(new Date()))}
+                  className={
+                    orderRange === 'day' && dayKey(orderAnchor) === dayKey(new Date())
+                      ? 'primary'
+                      : 'secondary'
+                  }
+                  onClick={() => focusOrderPeriod('day')}
                 >
                   Today
+                </button>
+                <button
+                  className={
+                    orderRange === 'week' && weekKey(orderAnchor) === weekKey(new Date())
+                      ? 'primary'
+                      : 'secondary'
+                  }
+                  onClick={() => focusOrderPeriod('week')}
+                >
+                  This week
+                </button>
+                <button
+                  className={
+                    orderRange === 'month' && monthKey(orderAnchor) === monthKey(new Date())
+                      ? 'primary'
+                      : 'secondary'
+                  }
+                  onClick={() => focusOrderPeriod('month')}
+                >
+                  This month
+                </button>
+                <button
+                  className={
+                    orderRange === 'year' && yearKey(orderAnchor) === yearKey(new Date())
+                      ? 'primary'
+                      : 'secondary'
+                  }
+                  onClick={() => focusOrderPeriod('year')}
+                >
+                  This year
+                </button>
+                <button
+                  className={orderRange === 'all' ? 'primary' : 'secondary'}
+                  onClick={() => setOrderRange('all')}
+                >
+                  All dates
                 </button>
               </div>
               <div className="order-filter-tabs" role="group" aria-label="Filter orders by status">
@@ -1608,7 +1816,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                   {orderFilter === 'All'
                     ? 'All orders'
                     : `${orderFilter.charAt(0).toUpperCase() + orderFilter.slice(1)} orders`}
-                  {orderDay && <small> · selected day</small>}
+                  {orderRange !== 'all' && <small> · {orderRange}</small>}
                 </h2>
                 <span>
                   {visibleOrders.length} {visibleOrders.length === 1 ? 'order' : 'orders'}

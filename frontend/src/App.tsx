@@ -16,6 +16,7 @@ import {
   Search,
   ShoppingBag,
   Trash2,
+  Heart,
 } from './icons';
 import OrderContactFields, { type OrderContact } from './OrderContactFields';
 import { productSku } from './productSku';
@@ -58,6 +59,17 @@ type Sale = {
   items: { name: string; quantity: number; price_cents: number; size: ProductSize }[];
 };
 type CartItem = { product: Product; quantity: number; size: ProductSize };
+type WishlistNotice = {
+  id: number;
+  product_id: number;
+  type: string;
+  customer_count: number;
+  read_at: string | null;
+  created_at: string;
+  product_name: string;
+  product_emoji: string;
+  product_category: string;
+};
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -129,7 +141,10 @@ export default function App({
     [busy, setBusy] = useState(false),
     [payment, setPayment] = useState('cash'),
     [receipt, setReceipt] = useState<Sale | null>(null),
-    [loading, setLoading] = useState(true);
+    [loading, setLoading] = useState(true),
+    [wishlist, setWishlist] = useState<number[]>([]),
+    [wishlistNotices, setWishlistNotices] = useState<WishlistNotice[]>([]),
+    [wishlistUnread, setWishlistUnread] = useState(0);
   useEffect(() => {
     onCartCount?.(cart.reduce((sum, item) => sum + item.quantity, 0));
   }, [cart, onCartCount]);
@@ -366,7 +381,7 @@ export default function App({
   }
 
   async function refresh() {
-    const [p, s, t, settings] = await Promise.all([
+    const [p, s, t, settings, wl, wn] = await Promise.all([
       api<Product[]>('/products'),
       api<Sale[]>('/sales'),
       api<
@@ -379,12 +394,17 @@ export default function App({
         }[]
       >('/table-choices'),
       api<{ tax_percent: number }>('/settings'),
+      api<number[]>('/wishlist'),
+      api<{ unread: number; notifications: WishlistNotice[] }>('/wishlist/notifications'),
     ]);
     setTaxPercent(settings.tax_percent);
     setTables(t);
     setInventory(p);
     setProducts(p.filter((x) => x.active));
     setSales(s);
+    setWishlist(wl);
+    setWishlistNotices(wn.notifications);
+    setWishlistUnread(wn.unread);
     setCart((c) =>
       c.map((i) => {
         const product = p.find((x) => x.id === i.product.id) || {
@@ -401,6 +421,26 @@ export default function App({
       .catch((e) => setError(e.message + ' — check that the Laravel API is running.'))
       .finally(() => setLoading(false));
   }, []);
+  function toggleWishlist(id: number) {
+    const active = wishlist.includes(id);
+    setWishlist((current) => (active ? current.filter((x) => x !== id) : [...current, id]));
+    void api(`/wishlist/${id}`, { method: active ? 'DELETE' : 'POST' }).catch((e) => {
+      setWishlist((current) => (active ? [...current, id] : current.filter((x) => x !== id)));
+      setError(e instanceof Error ? e.message : 'Could not update your wishlist.');
+    });
+  }
+  useEffect(() => {
+    if (tab !== 'wishlist' || !wishlistUnread) return;
+    void (async () => {
+      setWishlistUnread(0);
+      setWishlistNotices((n) => n.map((x) => ({ ...x, read_at: new Date().toISOString() })));
+      try {
+        await api('/wishlist/notifications/read', { method: 'POST' });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not clear wishlist notifications.');
+      }
+    })();
+  }, [tab]);
   function add(p: Product) {
     if (submitting.current) return;
     setCart((c) => {
@@ -596,6 +636,7 @@ export default function App({
         <nav>
           {[
             ['register', 'Point of sale', LayoutGrid],
+            ['wishlist', 'Wishlist', Heart],
             ['inventory', 'Inventory', Package],
             ['sales', 'Sales history', Receipt],
           ].map(([key, label, Icon]) => (
@@ -612,6 +653,14 @@ export default function App({
             >
               {typeof Icon !== 'string' && <Icon size={20} />}
               <span>{String(label)}</span>
+              {key === 'wishlist' && wishlistUnread > 0 && (
+                <span
+                  className="pos-nav-notice"
+                  aria-label={`${wishlistUnread} unread wishlist notifications`}
+                >
+                  {wishlistUnread}
+                </span>
+              )}
               {tab === key && <span className="nav-dot" />}
             </button>
           ))}
@@ -647,16 +696,20 @@ export default function App({
                 ? 'Order bag'
                 : tab === 'register'
                   ? 'Point of sale'
-                  : tab === 'inventory'
-                    ? 'Inventory'
-                    : 'Sales history'}
+                  : tab === 'wishlist'
+                    ? 'Wishlist'
+                    : tab === 'inventory'
+                      ? 'Inventory'
+                      : 'Sales history'}
             </h1>
             <p>
               {tab === 'register'
                 ? 'Good things start at the Kipi POS Let’s make a sale.'
-                : tab === 'inventory'
-                  ? 'A little organization. A smoother day.'
-                  : 'Every transaction, all in one place.'}
+                : tab === 'wishlist'
+                  ? 'Your saved favorites, ready when you need them.'
+                  : tab === 'inventory'
+                    ? 'A little organization. A smoother day.'
+                    : 'Every transaction, all in one place.'}
             </p>
           </div>
           <div className="date">
@@ -730,11 +783,33 @@ export default function App({
                 <div className="product-grid">
                   {filtered.map((p, i) => {
                     const inBag = cart.find((item) => item.product.id === p.id)?.quantity || 0;
+                    const available = Math.max(0, p.stock - inBag);
                     return (
                       <div
                         key={p.id}
                         className={`product ${inBag ? 'pos-product-selected' : ''} ${!p.stock ? 'pos-product-disabled' : ''}`}
                       >
+                        <button
+                          type="button"
+                          className={`pos-card-heart ${wishlist.includes(p.id) ? 'active' : ''}`}
+                          aria-label={
+                            wishlist.includes(p.id)
+                              ? `Remove ${p.name} from wishlist`
+                              : `Save ${p.name} to wishlist`
+                          }
+                          aria-pressed={wishlist.includes(p.id)}
+                          title={
+                            wishlist.includes(p.id) ? 'Remove from wishlist' : 'Save to wishlist'
+                          }
+                          disabled={busy || loading || !!receipt}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleWishlist(p.id);
+                          }}
+                        >
+                          <Heart size={17} filled={wishlist.includes(p.id)} />
+                        </button>
                         <button
                           type="button"
                           className={`product-art color-${i % 5}`}
@@ -749,14 +824,14 @@ export default function App({
                           )}
                           <small
                             className={
-                              p.stock === 0
+                              available === 0
                                 ? 'pos-sold-out'
-                                : p.stock < 5
+                                : available < 5
                                   ? 'pos-low-stock'
                                   : 'pos-in-stock'
                             }
                           >
-                            {p.stock ? `${p.stock} in stock` : 'Sold out'}
+                            {available ? `${available} in stock` : 'Sold out'}
                           </small>
                         </button>
                         <div className="product-info">
@@ -1073,6 +1148,150 @@ export default function App({
               </aside>
             )}
           </div>
+        ) : tab === 'wishlist' ? (
+          <section className="catalog wishlist-catalog">
+            <div className="section-heading">
+              <h2>
+                Saved products <span>{wishlist.length}</span>
+              </h2>
+              {wishlist.length > 0 && (
+                <button
+                  type="button"
+                  className="primary pos-review-bag"
+                  disabled={!cart.length || busy || loading}
+                  onClick={() => {
+                    setTab('bag');
+                    onOpenBag?.();
+                  }}
+                >
+                  <ShoppingBag size={18} /> Review bag (
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)})
+                </button>
+              )}
+            </div>
+            {wishlistNotices.length > 0 && (
+              <ul className="wishlist-notices">
+                {wishlistNotices.map((n) => (
+                  <li key={n.id} className={n.read_at ? 'read' : 'unread'}>
+                    <span className="wishlist-notice-emoji">{n.product_emoji}</span>
+                    <span>
+                      <strong>{n.product_name}</strong>
+                      <small>
+                        {n.customer_count > 0
+                          ? `${n.customer_count} ${n.customer_count === 1 ? 'customer has' : 'customers have'} this on their wishlist — it's back in stock.`
+                          : 'Back in stock — great for your customers.'}
+                      </small>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!wishlist.length ? (
+              <div className="wishlist-empty">
+                <Heart size={34} />
+                <h3>No favorites yet</h3>
+                <p>Tap the heart on any product in the register to save it here.</p>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => {
+                    setTab('register');
+                    onNavigate?.('register');
+                  }}
+                >
+                  Back to Point of sale
+                </button>
+              </div>
+            ) : (
+              <div className="product-grid">
+                {products
+                  .filter((p) => wishlist.includes(p.id))
+                  .map((p, i) => {
+                    const inBag = cart.find((item) => item.product.id === p.id)?.quantity || 0;
+                    return (
+                      <div
+                        key={p.id}
+                        className={`product ${!p.stock ? 'pos-product-disabled' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className={`pos-card-heart active`}
+                          aria-label={`Remove ${p.name} from wishlist`}
+                          aria-pressed="true"
+                          title="Remove from wishlist"
+                          disabled={busy || loading || !!receipt}
+                          onClick={() => toggleWishlist(p.id)}
+                        >
+                          <Heart size={17} filled />
+                        </button>
+                        <button
+                          type="button"
+                          className={`product-art color-${i % 5}`}
+                          aria-label={`Add ${p.name} to order bag`}
+                          disabled={!p.stock || busy || loading || !!receipt}
+                          onClick={() => add(p)}
+                        >
+                          {p.image_path ? (
+                            <img src={`/api/products/${p.id}/image`} alt={p.name} />
+                          ) : (
+                            <span>{p.emoji}</span>
+                          )}
+                          <small
+                            className={
+                              p.stock === 0
+                                ? 'pos-sold-out'
+                                : p.stock < 5
+                                  ? 'pos-low-stock'
+                                  : 'pos-in-stock'
+                            }
+                          >
+                            {p.stock > 0 ? `${p.stock} in stock` : 'Sold out'}
+                          </small>
+                        </button>
+                        <div className="product-info">
+                          <small>{p.category}</small>
+                          <h3>{p.name}</h3>
+                          <div>
+                            <b>{money(sizePrice(p, defaultSize(p)))}</b>
+                            {inBag ? (
+                              <span className="pos-card-stepper">
+                                <button
+                                  type="button"
+                                  disabled={busy || loading || !!receipt}
+                                  aria-label={`Remove one ${p.name}`}
+                                  onClick={() => quantity(p.id, -1)}
+                                >
+                                  <Minus size={13} />
+                                </button>
+                                <span>{inBag}</span>
+                                <button
+                                  type="button"
+                                  disabled={busy || loading || !!receipt || inBag >= p.stock}
+                                  aria-label={`Add one ${p.name}`}
+                                  onClick={() => add(p)}
+                                >
+                                  <Plus size={13} />
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="add"
+                                disabled={!p.stock || busy || loading || !!receipt}
+                                onClick={() => add(p)}
+                              >
+                                <Plus size={14} />
+                                {p.stock === 0 ? 'Sold out' : 'Add'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </section>
         ) : tab === 'inventory' ? (
           <section className="panel inventory-panel">
             <div className="inventory-create-heading">

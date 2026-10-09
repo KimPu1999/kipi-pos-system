@@ -313,4 +313,85 @@ class PromotionTest extends TestCase
       'product_ids' => [999999],
     ])->assertUnprocessable();
   }
+  public function test_category_promotion_discounts_only_eligible_categories(): void
+  {
+    $u = User::create([
+      'name' => 'Admin',
+      'email' => 'catpromo@example.com',
+      'password' => 'password-123',
+    ]);
+    $u->role = 'admin';
+    $u->save();
+    $this->actingAs($u);
+    $coffee = DB::table('products')->insertGetId([
+      'name' => 'Coffee',
+      'sku' => 'COFFEE2',
+      'category' => 'Drinks',
+      'price_cents' => 1000,
+      'stock' => 5,
+    ]);
+    $soda = DB::table('products')->insertGetId([
+      'name' => 'Soda',
+      'sku' => 'SODA2',
+      'category' => 'Drinks',
+      'price_cents' => 1000,
+      'stock' => 5,
+    ]);
+    $cake = DB::table('products')->insertGetId([
+      'name' => 'Cake',
+      'sku' => 'CAKE2',
+      'category' => 'Food',
+      'price_cents' => 2000,
+      'stock' => 5,
+    ]);
+    $id = $this->post(
+      '/api/promotions',
+      [
+        'name' => 'Drinks weekend',
+        'code' => 'DRINKS20',
+        'percent' => 20,
+        'categories' => json_encode(['Drinks']),
+      ],
+      ['Accept' => 'application/json'],
+    )
+      ->assertCreated()
+      ->assertJsonPath('categories.0', 'Drinks')
+      ->json('id');
+    $this->postJson('/api/orders', [
+      'promotion_code' => 'DRINKS20',
+      'items' => [
+        ['product_id' => $coffee, 'quantity' => 1],
+        ['product_id' => $soda, 'quantity' => 1],
+        ['product_id' => $cake, 'quantity' => 1],
+      ],
+    ])
+      ->assertCreated()
+      ->assertJsonPath('subtotal_cents', 4000)
+      ->assertJsonPath('discount_cents', 400)
+      ->assertJsonPath('total_cents', 3600);
+    $this->postJson('/api/orders', [
+      'promotion_code' => 'DRINKS20',
+      'items' => [['product_id' => $cake, 'quantity' => 1]],
+    ])->assertUnprocessable();
+    $this->putJson('/api/promotions/' . $id, [
+      'name' => 'Drinks weekend',
+      'code' => 'DRINKS20',
+      'percent' => 20,
+      'categories' => [],
+    ])
+      ->assertOk()
+      ->assertJsonPath('categories', []);
+    $this->postJson('/api/orders', [
+      'promotion_code' => 'DRINKS20',
+      'items' => [['product_id' => $cake, 'quantity' => 1]],
+    ])
+      ->assertCreated()
+      ->assertJsonPath('discount_cents', 400);
+    $this->postJson('/api/promotions', [
+      'name' => 'Too long category',
+      'code' => 'TOOLONG',
+      'percent' => 10,
+      'categories' => [str_repeat('x', 61)],
+    ])->assertUnprocessable();
+  }
 }

@@ -158,3 +158,32 @@ export const NotebookIcon = icon('notebook', [
   'M5 3h15v18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8 3v18M3 7h3M3 12h3M3 17h3',
   'M8 3h12v18H8Z',
 ]);
+const HEART_PATH =
+  'M12 20.5S4 15.4 2.2 11.4C1.1 8.6 3 5.8 6.2 5.8c2 0 3.4 1 4.3 2.3l1.5 2 1.5-2c.9-1.3 2.3-2.3 4.3-2.3 3.2 0 5.1 2.8 4 5.6C20 15.4 12 20.5 12 20.5Z';
+export function Heart({
+  size = 24,
+  strokeWidth = 1.9,
+  className = '',
+  filled = false,
+  ...props
+}: IconProps & { filled?: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`lucide kipi-icon kipi-icon-heart ${className}`}
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <path d={HEART_PATH} />
+    </svg>
+  );
+}

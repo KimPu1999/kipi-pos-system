@@ -38,8 +38,8 @@ export default function PromotionBanners({
               <span className="promotion-percent">Save {p.percent}%</span>
               <h3>{p.name}</h3>
               <p className="promotion-product-scope">
-                {p.product_ids.length
-                  ? `For: ${p.product_ids.map((id) => products.find((x) => x.id === id)?.name || 'Selected product').join(', ')}`
+                {p.categories.length
+                  ? `For categories: ${p.categories.join(', ')}`
                   : 'Applies to all products'}
               </p>
               <p>

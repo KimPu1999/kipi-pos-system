@@ -1530,6 +1530,10 @@ body {
   border-color: var(--line);
   color: var(--ink);
 }
+[data-theme='dark'] .employee-delete,
+[data-theme='dark'] .employee-attendance-delete {
+  color: #f28b83;
+}
 .portal
   :is(
     .cart-item,
@@ -5405,6 +5409,20 @@ body {
   color: #ffb9bf !important;
   border-color: #a45c65 !important;
 }
+.portal .pos-app .pos-card-heart {
+  background: var(--control);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.portal .pos-app .pos-card-heart.active {
+  color: #ff7a86;
+}
+.portal .pos-app .wishlist-empty {
+  color: var(--muted);
+}
+.portal .pos-app .wishlist-empty h3 {
+  color: var(--ink);
+}
 .portal .pos-app .product:disabled {
   opacity: 0.8;
 }
@@ -5562,6 +5580,38 @@ body {
   background: #482327 !important;
   color: #ffb9bf !important;
   border-color: #a45c65 !important;
+}
+.customer-portal .customer-product .product-art .shop-card-heart {
+  background: var(--control);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.customer-portal .customer-product .product-art .shop-card-heart.active {
+  color: #ff7a86;
+}
+.customer-portal .wishlist-header {
+  border-color: var(--line);
+}
+.customer-portal .wishlist-header h2 {
+  color: var(--ink);
+}
+.customer-portal .wishlist-notices li,
+.portal .pos-app .wishlist-notices li {
+  background: var(--soft);
+  border-color: var(--line);
+}
+.customer-portal .wishlist-notices li.unread,
+.portal .pos-app .wishlist-notices li.unread {
+  background: var(--primary-soft);
+  border-color: var(--primary-border);
+}
+.customer-portal .wishlist-notices strong,
+.portal .pos-app .wishlist-notices strong {
+  color: var(--ink);
+}
+.customer-portal .wishlist-notices small,
+.portal .pos-app .wishlist-notices small {
+  color: var(--muted);
 }
 .customer-portal .customer-featured-card {
   background: var(--box-bg) !important;
@@ -6847,21 +6897,21 @@ body {
   border-radius: 12px;
   margin: 24px 0;
 }
-.promotions-workspace :is(.product-edit-heading, .promotion-products) {
+.promotions-workspace :is(.product-edit-heading, .promotion-categories) {
   grid-column: 1 / -1;
 }
 .portal .promotions-workspace :is(p, legend, label, small) {
   color: var(--box-text) !important;
   line-height: 1.6;
 }
-.promotions-workspace .promotion-products > div {
+.promotions-workspace .promotion-categories > div {
   max-height: 250px;
   overflow: auto;
   padding: 12px;
   background: var(--box-bg);
   border-radius: 10px;
 }
-.promotions-workspace .promotion-products > div > label {
+.promotions-workspace .promotion-categories > div > label {
   padding: 8px;
   border-bottom: 1px solid var(--box-border);
   gap: 10px;

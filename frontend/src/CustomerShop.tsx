@@ -1,5 +1,15 @@
 import TableChoice from './TableChoice';
-import { Search, Plus, Minus, Trash2, ShoppingBag, Clock, Banknote, ArrowRight } from './icons';
+import {
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingBag,
+  Clock,
+  Banknote,
+  ArrowRight,
+  Heart,
+} from './icons';
 import PromotionBanners from './PromotionBanners';
 import type { Promotion } from './Promotions';
 import OrderContactFields, { type OrderContact } from './OrderContactFields';
@@ -57,6 +67,8 @@ type Props = {
   setCategory: (value: string) => void;
   note: string;
   setNote: (value: string) => void;
+  wishlist: number[];
+  onToggleWishlist: (productId: number) => void;
   busy: boolean;
   loading: boolean;
   place: () => void;
@@ -121,6 +133,8 @@ export default function CustomerShop({
   setCategory,
   note,
   setNote,
+  wishlist,
+  onToggleWishlist,
   busy,
   loading,
   place,
@@ -143,7 +157,7 @@ export default function CustomerShop({
   );
   const eligible = promo
     ? products.filter(
-        (p) => cart[p.id] && (!promo.product_ids.length || promo.product_ids.includes(p.id)),
+        (p) => cart[p.id] && (!promo.categories.length || promo.categories.includes(p.category)),
       )
     : [];
   const eligibleTotal = eligible.reduce(
@@ -256,6 +270,25 @@ export default function CustomerShop({
                       <span aria-hidden="true">{p.emoji}</span>
                     )}
                   </>
+                  <button
+                    type="button"
+                    disabled={busy || loading}
+                    className={`shop-card-heart ${wishlist.includes(p.id) ? 'active' : ''}`}
+                    aria-label={
+                      wishlist.includes(p.id)
+                        ? `Remove ${p.name} from wishlist`
+                        : `Save ${p.name} to wishlist`
+                    }
+                    aria-pressed={wishlist.includes(p.id)}
+                    title={wishlist.includes(p.id) ? 'Remove from wishlist' : 'Save to wishlist'}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onToggleWishlist(p.id);
+                    }}
+                  >
+                    <Heart size={17} filled={wishlist.includes(p.id)} />
+                  </button>
                   <small
                     className={
                       p.stock === 0
@@ -276,7 +309,7 @@ export default function CustomerShop({
                   <small>{p.category}</small>
                   <h3>{p.name}</h3>
                   {promotions
-                    .filter((offer) => offer.active && offer.product_ids.includes(p.id))
+                    .filter((offer) => offer.active && offer.categories.includes(p.category))
                     .map((offer) => (
                       <span className="product-promo-label" key={offer.id}>
                         {offer.percent}% off · {offer.code}
@@ -540,7 +573,7 @@ export default function CustomerShop({
                 This code is unavailable. Clear it or enter an active code.
               </p>
             )}
-            {promo && promo.product_ids.length > 0 && !eligible.length && (
+            {promo && promo.categories.length > 0 && !eligible.length && (
               <p className="order-warning">Add a qualifying product to use this code.</p>
             )}
             {promo && (
@@ -658,7 +691,7 @@ export default function CustomerShop({
                 (serviceType === 'dine_in' &&
                   !tables.some((t) => t.id === tableId && t.status === 'available')) ||
                 !!(promotionCode && !promo) ||
-                !!(promo?.product_ids.length && !eligible.length)
+                !!(promo?.categories.length && !eligible.length)
               }
               type="submit"
             >
