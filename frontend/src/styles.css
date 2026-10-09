@@ -1896,6 +1896,35 @@ th {
   font-size: 10px;
   border-radius: 6px;
 }
+.customer-product .shop-card-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eaf2e3;
+  color: #446e36;
+  padding: 4px;
+  border-radius: 7px;
+}
+.customer-product .shop-card-stepper button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dfe7d4;
+  border-radius: 5px;
+  background: #fff;
+  color: #446e36;
+}
+.customer-product .shop-card-stepper span {
+  min-width: 20px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #446e36;
+}
+.customer-product .shop-card-stepper button:disabled {
+  opacity: 0.5;
+}
 .in-cart {
   font-size: 9px;
   color: #6b8955;
@@ -2891,6 +2920,43 @@ th {
   padding: 6px 7px;
   font-size: 9px;
   border-radius: 5px;
+}
+.pos-app .pos-card-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #eaf1f8;
+  color: #557b9d;
+  padding: 4px;
+  border-radius: 7px;
+}
+.pos-app .pos-card-stepper button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6e2ec;
+  border-radius: 5px;
+  background: #fff;
+  color: #557b9d;
+}
+.pos-app .pos-card-stepper span {
+  min-width: 20px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #557b9d;
+}
+.pos-app .pos-card-stepper button:disabled {
+  opacity: 0.5;
+}
+.pos-app .product.pos-product-disabled {
+  opacity: 0.8;
+}
+.pos-app .product > .product-art {
+  padding: 0;
+  width: calc(100% - 14px);
+  text-align: inherit;
 }
 .pos-app .catalog-footer {
   color: #7d8fa0;

@@ -72,21 +72,16 @@ const sizePrice = (product: Product, size: ProductSize) =>
     : size === 'large'
       ? product.large_price_cents
       : product.medium_price_cents) ?? product.price_cents;
-const availableSizes = (product: Product): ProductSize[] => {
-  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
-    const price =
-      size === 'small'
-        ? product.small_price_cents
-        : size === 'large'
-          ? product.large_price_cents
-          : product.medium_price_cents;
-    return price !== null && price !== undefined;
-  });
-  return sizes.length ? [...sizes] : ['medium'];
+const sizeOptions = (product: Product): ProductSize[] => {
+  const options: ProductSize[] = [];
+  if ((product.small_price_cents ?? 0) > 0) options.push('small');
+  if ((product.medium_price_cents ?? 0) > 0) options.push('medium');
+  if ((product.large_price_cents ?? 0) > 0) options.push('large');
+  return options;
 };
 const defaultSize = (product: Product): ProductSize => {
-  const sizes = availableSizes(product);
-  return sizes.includes('medium') ? 'medium' : sizes[0];
+  const options = sizeOptions(product);
+  return options.includes('medium') ? 'medium' : options[0] || 'medium';
 };
 const sizePriceInput = (product: Product | null, size: ProductSize) => {
   if (!product) return '';
@@ -101,7 +96,7 @@ const sizePriceInput = (product: Product | null, size: ProductSize) => {
 const cartItemWithProduct = (item: CartItem, product: Product): CartItem => ({
   ...item,
   product,
-  size: availableSizes(product).includes(item.size) ? item.size : defaultSize(product),
+  size: sizeOptions(product).includes(item.size) ? item.size : defaultSize(product),
 });
 export default function App({
   user,
@@ -733,49 +728,78 @@ export default function App({
                   ))}
                 </div>
                 <div className="product-grid">
-                  {filtered.map((p, i) => (
-                    <button
-                      key={p.id}
-                      className={`product ${cart.some((item) => item.product.id === p.id) ? 'pos-product-selected' : ''}`}
-                      aria-label={`Add ${p.name} to order bag`}
-                      disabled={!p.stock || busy || loading || !!receipt}
-                      onClick={() => add(p)}
-                    >
-                      <div className={`product-art color-${i % 5}`}>
-                        <>
+                  {filtered.map((p, i) => {
+                    const inBag = cart.find((item) => item.product.id === p.id)?.quantity || 0;
+                    return (
+                      <div
+                        key={p.id}
+                        className={`product ${inBag ? 'pos-product-selected' : ''} ${!p.stock ? 'pos-product-disabled' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className={`product-art color-${i % 5}`}
+                          aria-label={`Add ${p.name} to order bag`}
+                          disabled={!p.stock || busy || loading || !!receipt}
+                          onClick={() => add(p)}
+                        >
                           {p.image_path ? (
                             <img src={`/api/products/${p.id}/image`} alt={p.name} />
                           ) : (
                             <span>{p.emoji}</span>
                           )}
-                        </>
-                        <small
-                          className={
-                            p.stock === 0
-                              ? 'pos-sold-out'
-                              : p.stock < 5
-                                ? 'pos-low-stock'
-                                : 'pos-in-stock'
-                          }
-                        >
-                          {p.stock ? `${p.stock} in stock` : 'Sold out'}
-                        </small>
-                      </div>
-                      <div className="product-info">
-                        <small>{p.category}</small>
-                        <h3>{p.name}</h3>
-                        <div>
-                          <b>{money(p.price_cents)}</b>
-                          <span className="add">
-                            <Plus size={14} />
-                            {cart.find((item) => item.product.id === p.id)?.quantity
-                              ? `${cart.find((item) => item.product.id === p.id)?.quantity} in bag`
-                              : 'Add'}
-                          </span>
+                          <small
+                            className={
+                              p.stock === 0
+                                ? 'pos-sold-out'
+                                : p.stock < 5
+                                  ? 'pos-low-stock'
+                                  : 'pos-in-stock'
+                            }
+                          >
+                            {p.stock ? `${p.stock} in stock` : 'Sold out'}
+                          </small>
+                        </button>
+                        <div className="product-info">
+                          <small>{p.category}</small>
+                          <h3>{p.name}</h3>
+                          <div>
+                            <b>{money(p.price_cents)}</b>
+                            {inBag ? (
+                              <span className="pos-card-stepper">
+                                <button
+                                  type="button"
+                                  disabled={busy || loading || !!receipt}
+                                  aria-label={`Remove one ${p.name}`}
+                                  onClick={() => quantity(p.id, -1)}
+                                >
+                                  <Minus size={13} />
+                                </button>
+                                <span>{inBag}</span>
+                                <button
+                                  type="button"
+                                  disabled={busy || loading || !!receipt || inBag >= p.stock}
+                                  aria-label={`Add one ${p.name}`}
+                                  onClick={() => add(p)}
+                                >
+                                  <Plus size={13} />
+                                </button>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="add"
+                                disabled={!p.stock || busy || loading || !!receipt}
+                                onClick={() => add(p)}
+                              >
+                                <Plus size={14} />
+                                Add
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
                 {loading && <p className="empty">Loading your catalog…</p>}
                 {!loading && !filtered.length && (
@@ -842,23 +866,25 @@ export default function App({
                         <div className="cart-item-info">
                           <b>{i.product.name}</b>
                           <small>{money(sizePrice(i.product, i.size))}</small>
-                          <fieldset className="pos-size-picker">
-                            <legend>Size</legend>
-                            <div>
-                              {availableSizes(i.product).map((size) => (
-                                <button
-                                  type="button"
-                                  key={size}
-                                  className={i.size === size ? 'selected' : ''}
-                                  aria-pressed={i.size === size}
-                                  disabled={busy}
-                                  onClick={() => setItemSize(i.product.id, size)}
-                                >
-                                  {size.charAt(0).toUpperCase() + size.slice(1)}
-                                </button>
-                              ))}
-                            </div>
-                          </fieldset>
+                          {sizeOptions(i.product).length > 0 && (
+                            <fieldset className="pos-size-picker">
+                              <legend>Size</legend>
+                              <div>
+                                {sizeOptions(i.product).map((size) => (
+                                  <button
+                                    type="button"
+                                    key={size}
+                                    className={i.size === size ? 'selected' : ''}
+                                    aria-pressed={i.size === size}
+                                    disabled={busy}
+                                    onClick={() => setItemSize(i.product.id, size)}
+                                  >
+                                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            </fieldset>
+                          )}
                           <div className="stepper">
                             <button
                               disabled={busy}

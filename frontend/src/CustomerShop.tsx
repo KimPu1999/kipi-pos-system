@@ -75,31 +75,19 @@ const sizePrice = (product: Product, size: ProductSize) =>
     : size === 'large'
       ? product.large_price_cents
       : product.medium_price_cents) ?? product.price_cents;
-const availableSizes = (product: Product): ProductSize[] => {
-  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
-    const price =
-      size === 'small'
-        ? product.small_price_cents
-        : size === 'large'
-          ? product.large_price_cents
-          : product.medium_price_cents;
-    return price !== null && price !== undefined;
-  });
-  return sizes.length ? [...sizes] : ['medium'];
+const sizeOptions = (product: Product): ProductSize[] => {
+  const options: ProductSize[] = [];
+  if ((product.small_price_cents ?? 0) > 0) options.push('small');
+  if ((product.medium_price_cents ?? 0) > 0) options.push('medium');
+  if ((product.large_price_cents ?? 0) > 0) options.push('large');
+  return options;
 };
-const selectedSize = (product: Product, size?: ProductSize) => {
-  const available = availableSizes(product);
-  return size && available.includes(size)
+const selectedSize = (product: Product, size?: ProductSize) =>
+  size && sizeOptions(product).includes(size)
     ? size
-    : available.includes('medium')
+    : sizeOptions(product).includes('medium')
       ? 'medium'
-      : available[0];
-};
-const shopPrice = (product: Product) => {
-  const available = availableSizes(product);
-  const price = Math.min(...available.map((size) => sizePrice(product, size)));
-  return `${available.length > 1 ? 'From ' : ''}${money(price)}`;
-};
+      : sizeOptions(product)[0] || 'medium';
 export default function CustomerShop({
   taxPercent,
   view,
@@ -295,18 +283,39 @@ export default function CustomerShop({
                       </span>
                     ))}
                   <div>
-                    <b>{shopPrice(p)}</b>
-                    <button
-                      className="shop-add"
-                      aria-label={`Add ${p.name} to order`}
-                      disabled={busy || loading || p.stock <= (cart[p.id] || 0)}
-                      onClick={() => change(p, 1)}
-                    >
-                      <Plus size={14} />
-                      {p.stock === 0 ? 'Sold out' : 'Add'}
-                    </button>
+                    <b>{money(sizePrice(p, selectedSize(p, sizes[p.id])))}</b>
+                    {cart[p.id] ? (
+                      <span className="shop-card-stepper">
+                        <button
+                          type="button"
+                          disabled={busy || loading}
+                          aria-label={`Remove one ${p.name}`}
+                          onClick={() => change(p, -1)}
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span>{cart[p.id]}</span>
+                        <button
+                          type="button"
+                          disabled={busy || loading || cart[p.id] >= p.stock}
+                          aria-label={`Add one ${p.name}`}
+                          onClick={() => change(p, 1)}
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        className="shop-add"
+                        aria-label={`Add ${p.name} to order`}
+                        disabled={busy || loading || p.stock <= 0}
+                        onClick={() => change(p, 1)}
+                      >
+                        <Plus size={14} />
+                        {p.stock === 0 ? 'Sold out' : 'Add'}
+                      </button>
+                    )}
                   </div>
-                  {!!cart[p.id] && <p className="in-cart">{cart[p.id]} in your order</p>}
                 </div>
               </article>
             ))}
@@ -392,25 +401,29 @@ export default function CustomerShop({
                     </small>
                     {p && (
                       <>
-                        <fieldset className="bag-size-picker">
-                          <legend>Choose size</legend>
-                          <div>
-                            {availableSizes(p).map((size) => (
-                              <button
-                                type="button"
-                                key={size}
-                                className={selectedSize(p, sizes[p.id]) === size ? 'selected' : ''}
-                                aria-pressed={selectedSize(p, sizes[p.id]) === size}
-                                disabled={busy}
-                                onClick={() =>
-                                  setSizes((current) => ({ ...current, [p.id]: size }))
-                                }
-                              >
-                                {size.charAt(0).toUpperCase() + size.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-                        </fieldset>
+                        {sizeOptions(p).length > 0 && (
+                          <fieldset className="bag-size-picker">
+                            <legend>Choose size</legend>
+                            <div>
+                              {sizeOptions(p).map((size) => (
+                                <button
+                                  type="button"
+                                  key={size}
+                                  className={
+                                    selectedSize(p, sizes[p.id]) === size ? 'selected' : ''
+                                  }
+                                  aria-pressed={selectedSize(p, sizes[p.id]) === size}
+                                  disabled={busy}
+                                  onClick={() =>
+                                    setSizes((current) => ({ ...current, [p.id]: size }))
+                                  }
+                                >
+                                  {size.charAt(0).toUpperCase() + size.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </fieldset>
+                        )}
                         <div className="stepper">
                           <button
                             aria-label={`Remove one ${p.name}`}

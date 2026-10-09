@@ -124,24 +124,19 @@ const money = (c: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(c / 100);
-const availableProductSizes = (product: Product): ProductSize[] => {
-  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
-    const price =
-      size === 'small'
-        ? product.small_price_cents
-        : size === 'large'
-          ? product.large_price_cents
-          : product.medium_price_cents;
-    return price !== null && price !== undefined;
-  });
-  return sizes.length ? [...sizes] : ['medium'];
+const productSizeOptions = (product: Product): ProductSize[] => {
+  const options: ProductSize[] = [];
+  if ((product.small_price_cents ?? 0) > 0) options.push('small');
+  if ((product.medium_price_cents ?? 0) > 0) options.push('medium');
+  if ((product.large_price_cents ?? 0) > 0) options.push('large');
+  return options;
 };
 const defaultProductSize = (product: Product): ProductSize => {
-  const sizes = availableProductSizes(product);
-  return sizes.includes('medium') ? 'medium' : sizes[0];
+  const options = productSizeOptions(product);
+  return options.includes('medium') ? 'medium' : options[0] || 'medium';
 };
 const selectedProductSize = (product: Product, size?: ProductSize): ProductSize =>
-  size && availableProductSizes(product).includes(size) ? size : defaultProductSize(product);
+  size && productSizeOptions(product).includes(size) ? size : defaultProductSize(product);
 const sizePriceInput = (product: Product | null, size: ProductSize) => {
   if (!product) return '';
   const price =
@@ -2240,22 +2235,28 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                     )
                   }
                 />
-                <select
-                  aria-label={`Size for ${p?.name || old?.name}`}
-                  value={item.size}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setEditItems((items) =>
-                      items.map((i, n) =>
-                        n === index ? { ...i, size: e.target.value as ProductSize } : i,
-                      ),
-                    )
-                  }
-                >
-                  <option value="small">Small</option>
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
-                </select>
+                {p && productSizeOptions(p).length > 0 && (
+                  <select
+                    aria-label={`Size for ${p?.name || old?.name}`}
+                    value={
+                      productSizeOptions(p).includes(item.size) ? item.size : defaultProductSize(p)
+                    }
+                    disabled={busy}
+                    onChange={(e) =>
+                      setEditItems((items) =>
+                        items.map((i, n) =>
+                          n === index ? { ...i, size: e.target.value as ProductSize } : i,
+                        ),
+                      )
+                    }
+                  >
+                    {productSizeOptions(p).map((size) => (
+                      <option key={size} value={size}>
+                        {size.charAt(0).toUpperCase() + size.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             );
           })}
