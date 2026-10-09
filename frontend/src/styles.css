@@ -4727,6 +4727,15 @@ th {
 .order-day-navigation button:disabled {
   opacity: 0.45;
 }
+.billing-toolbar {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 700px) {
+  .billing-toolbar {
+    flex-wrap: wrap;
+  }
+}
 @media (max-width: 760px) {
   .order-day-navigation {
     grid-template-columns: 1fr 1fr;

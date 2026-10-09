@@ -55,6 +55,7 @@ export default function Billing({
     [page, setPage] = useState(1),
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
+    [exporting, setExporting] = useState(false),
     [reload, setReload] = useState(0);
   useEffect(() => {
     let current = true;
@@ -82,6 +83,95 @@ export default function Billing({
     if (selected) billDialog.current?.showModal();
     else billDialog.current?.close();
   }, [selected]);
+  type BillRange = 'all' | 'day' | 'week' | 'month' | 'year';
+  const [billRange, setBillRange] = useState<BillRange>('all');
+  const [billAnchor, setBillAnchor] = useState<Date>(() => new Date());
+  const ygnKey = (value: string | Date) =>
+    new Date((value instanceof Date ? value : new Date(value)).getTime() + 3600000 * 6.5)
+      .toISOString()
+      .slice(0, 10);
+  const monthKey = (value: string | Date) => ygnKey(value).slice(0, 7);
+  const yearKey = (value: string | Date) => ygnKey(value).slice(0, 4);
+  const weekKey = (value: string | Date) => {
+    const shifted = (value instanceof Date ? value : new Date(value)).getTime() + 3600000 * 6.5;
+    const day = new Date(shifted).getUTCDay();
+    return new Date(shifted - ((day + 6) % 7) * 86400000).toISOString().slice(0, 10);
+  };
+  const inBillPeriod = (createdAt: string | Date): boolean =>
+    billRange === 'all'
+      ? true
+      : billRange === 'day'
+        ? ygnKey(createdAt) === ygnKey(billAnchor)
+        : billRange === 'week'
+          ? weekKey(createdAt) === weekKey(billAnchor)
+          : billRange === 'month'
+            ? monthKey(createdAt) === monthKey(billAnchor)
+            : yearKey(createdAt) === yearKey(billAnchor);
+  const shiftBillPeriod = (amount: number) =>
+    setBillAnchor((current) => {
+      const date = new Date(current);
+      if (billRange === 'week') date.setDate(date.getDate() + amount * 7);
+      else if (billRange === 'month') date.setMonth(date.getMonth() + amount);
+      else if (billRange === 'year') date.setFullYear(date.getFullYear() + amount);
+      else date.setDate(date.getDate() + amount);
+      return date;
+    });
+  const ygnFormat = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(undefined, { timeZone: 'Asia/Yangon', ...options }).format(billAnchor);
+  const billWeekLabel = () => {
+    const start = weekKey(billAnchor);
+    const shifted = billAnchor.getTime() + 3600000 * 6.5;
+    const day = new Date(shifted).getUTCDay();
+    const startMs = shifted - ((day + 6) % 7) * 86400000;
+    const end = new Date(startMs + 6 * 86400000).toISOString().slice(0, 10);
+    const fmt = (iso: string) =>
+      new Intl.DateTimeFormat(undefined, {
+        timeZone: 'Asia/Yangon',
+        month: 'short',
+        day: 'numeric',
+      }).format(new Date(iso + 'T17:30:00Z'));
+    return `${fmt(start)} – ${fmt(end)}, ${start.slice(0, 4)}`;
+  };
+  const billPeriodLabel =
+    billRange === 'all'
+      ? 'All dates'
+      : billRange === 'day'
+        ? ygnFormat({ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : billRange === 'week'
+          ? billWeekLabel()
+          : billRange === 'month'
+            ? ygnFormat({ year: 'numeric', month: 'long' })
+            : yearKey(billAnchor);
+  async function downloadExport(kind: 'excel' | 'pdf') {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (billRange !== 'all') {
+        params.set('range', billRange);
+        params.set('date', ygnKey(billAnchor));
+      }
+      const response = await fetch(`/api/sales/export${kind === 'pdf' ? '-pdf' : ''}?${params}`, {
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Export failed. Try again.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `kipi-bills-${billRange === 'all' ? 'all' : ygnKey(billAnchor)}.${
+        kind === 'pdf' ? 'pdf' : 'xlsx'
+      }`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Export failed.');
+    } finally {
+      setExporting(false);
+    }
+  }
   const billDate = (value: string) =>
     new Date(value.includes('T') ? value : value.replace(' ', 'T') + 'Z').toLocaleString('en-GB', {
       timeZone: 'Asia/Yangon',
@@ -94,7 +184,8 @@ export default function Billing({
       : bill.payment_method === 'card'
         ? 'Card'
         : 'Cash';
-  const visible = bills.filter((b) =>
+  const dateBills = bills.filter((b) => inBillPeriod(b.created_at));
+  const visible = dateBills.filter((b) =>
     `${b.id} ${paymentLabel(b)} ${b.items.map((i) => i.name).join(' ')}`
       .toLowerCase()
       .includes(search.toLowerCase()),
@@ -102,7 +193,7 @@ export default function Billing({
   const pages = Math.max(1, Math.ceil(visible.length / 10)),
     current = Math.min(page, pages),
     shown = visible.slice((current - 1) * 10, current * 10);
-  useEffect(() => setPage(1), [search]);
+  useEffect(() => setPage(1), [search, billRange, billAnchor]);
   return (
     <section className={receiptId ? 'billing-workspace order-paid-receipt' : 'billing-workspace'}>
       <section className="panel billing-list" hidden={!!receiptId}>
@@ -111,9 +202,29 @@ export default function Billing({
             <h2>Paid bills</h2>
             <p className="muted">POS sales and completed customer orders.</p>
           </div>
-          <button className="secondary" disabled={loading} onClick={() => setReload((n) => n + 1)}>
-            Refresh bills
-          </button>
+          <div className="billing-toolbar">
+            <button
+              className="secondary"
+              disabled={loading || exporting}
+              onClick={() => downloadExport('excel')}
+            >
+              Download Excel
+            </button>
+            <button
+              className="secondary"
+              disabled={loading || exporting}
+              onClick={() => downloadExport('pdf')}
+            >
+              Download PDF
+            </button>
+            <button
+              className="secondary"
+              disabled={loading}
+              onClick={() => setReload((n) => n + 1)}
+            >
+              Refresh bills
+            </button>
+          </div>
         </div>
         {error && (
           <p className="error" role="alert">
@@ -122,11 +233,92 @@ export default function Billing({
         )}
         <div className="product-summary">
           <div>
-            Paid bills <b>{bills.length}</b>
+            Paid bills <b>{dateBills.length}</b>
           </div>
           <div>
-            Paid amount <b>{money(bills.reduce((n, b) => n + b.total_cents, 0))}</b>
+            Paid amount <b>{money(dateBills.reduce((n, b) => n + b.total_cents, 0))}</b>
           </div>
+        </div>
+        <div className="order-day-navigation" role="group" aria-label="Choose bill period">
+          <button
+            className="secondary"
+            onClick={() => shiftBillPeriod(-1)}
+            disabled={billRange === 'all' || exporting || loading}
+          >
+            ← Previous {billRange === 'all' ? 'period' : billRange}
+          </button>
+          <div>
+            <span>{billRange === 'all' ? 'Complete history' : `Bills for ${billRange}`}</span>
+            <strong>{billPeriodLabel}</strong>
+            <small>
+              {dateBills.length} {dateBills.length === 1 ? 'bill' : 'bills'}
+            </small>
+          </div>
+          <button
+            className="secondary"
+            onClick={() => shiftBillPeriod(1)}
+            disabled={billRange === 'all' || inBillPeriod(new Date()) || exporting || loading}
+          >
+            Next {billRange === 'all' ? 'period' : billRange} →
+          </button>
+          <button
+            className={
+              billRange === 'day' && ygnKey(billAnchor) === ygnKey(new Date())
+                ? 'primary'
+                : 'secondary'
+            }
+            onClick={() => {
+              setBillRange('day');
+              setBillAnchor(new Date());
+            }}
+          >
+            Today
+          </button>
+          <button
+            className={
+              billRange === 'week' && weekKey(billAnchor) === weekKey(new Date())
+                ? 'primary'
+                : 'secondary'
+            }
+            onClick={() => {
+              setBillRange('week');
+              setBillAnchor(new Date());
+            }}
+          >
+            This week
+          </button>
+          <button
+            className={
+              billRange === 'month' && monthKey(billAnchor) === monthKey(new Date())
+                ? 'primary'
+                : 'secondary'
+            }
+            onClick={() => {
+              setBillRange('month');
+              setBillAnchor(new Date());
+            }}
+          >
+            This month
+          </button>
+          <button
+            className={
+              billRange === 'year' && yearKey(billAnchor) === yearKey(new Date())
+                ? 'primary'
+                : 'secondary'
+            }
+            onClick={() => {
+              setBillRange('year');
+              setBillAnchor(new Date());
+            }}
+          >
+            This year
+          </button>
+          <button
+            className={billRange === 'all' ? 'primary' : 'secondary'}
+            onClick={() => setBillRange('all')}
+          >
+            All dates
+          </button>
         </div>
         <label>
           Search bills

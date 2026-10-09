@@ -1,8 +1,11 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\BillPdfExport;
+use App\Services\ExcelExport;
 class PosController
 {
   public function products()
@@ -89,11 +92,209 @@ class PosController
     $sale->items = DB::table('sale_items')->where('sale_id', $id)->get();
     return $sale;
   }
-  public function sales()
+  private function saleRange(Request $r): array
   {
-    return response()->json(
-      DB::table('sales')->orderByDesc('id')->get()->map(fn($s) => $this->sale($s->id)),
-    );
+    $d = $r->validate([
+      'range' => 'sometimes|in:day,week,month,year,all',
+      'date' => 'required_if:range,day|required_if:range,week|required_if:range,month|required_if:range,year|date_format:Y-m-d',
+    ]);
+    $range = $d['range'] ?? 'all';
+    if ($range === 'all') {
+      return ['range' => $range, 'from' => null, 'until' => null, 'label' => 'all'];
+    }
+    $anchor = Carbon::parse($d['date'], 'Asia/Yangon');
+    $anchor = match ($range) {
+      'day' => $anchor->startOfDay(),
+      'week' => $anchor->startOfWeek(),
+      'month' => $anchor->startOfMonth(),
+      'year' => $anchor->startOfYear(),
+    };
+    $end = match ($range) {
+      'day' => $anchor->copy()->addDay(),
+      'week' => $anchor->copy()->addWeek(),
+      'month' => $anchor->copy()->addMonth(),
+      'year' => $anchor->copy()->addYear(),
+    };
+    $label = match ($range) {
+      'day' => $d['date'],
+      'week' =>
+        $anchor->format('Y-m-d') .
+        '--' .
+        $anchor->copy()->addDays(6)->format('Y-m-d'),
+      'month' => $anchor->format('Y-m'),
+      'year' => $anchor->format('Y'),
+    };
+    return [
+      'range' => $range,
+      'from' => $anchor->utc()->format('Y-m-d H:i:s'),
+      'until' => $end->utc()->format('Y-m-d H:i:s'),
+      'label' => $label,
+    ];
+  }
+  private function currency(int $cents): string
+  {
+    return number_format($cents / 100, 0);
+  }
+  private function paymentLabel(object $sale): string
+  {
+    return $sale->payment_method === 'bank_transfer'
+      ? ($sale->transfer_provider === 'ayapay' ? 'AYA Pay' : 'KBZPay')
+      : ucfirst((string) $sale->payment_method);
+  }
+  private function serviceLabel(string $service): string
+  {
+    return $service === 'dine_in' ? 'Dine in' : 'Takeaway';
+  }
+  private function saleBills(Request $r)
+  {
+    ['from' => $from, 'until' => $until] = $this->saleRange($r);
+    $q = DB::table('sales');
+    if ($from) {
+      $q->where('created_at', '>=', $from);
+    }
+    if ($until) {
+      $q->where('created_at', '<', $until);
+    }
+    return $q->orderByDesc('id')->get()->map(fn($s) => $this->sale($s->id));
+  }
+  public function sales(Request $r)
+  {
+    return response()->json($this->saleBills($r)->values());
+  }
+  public function exportExcel(Request $r)
+  {
+    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange($r);
+    $q = DB::table('sales');
+    if ($from) {
+      $q->where('created_at', '>=', $from);
+    }
+    if ($until) {
+      $q->where('created_at', '<', $until);
+    }
+    $bills = $q->orderBy('id')->get()->map(fn($s) => $this->sale($s->id));
+    $billSheet = function ($sale) {
+      return [
+        (string) $sale->id,
+        $this->serviceLabel((string) $sale->service_type),
+        $sale->table_name ?? '',
+        $sale->contact_name ?? '',
+        $sale->contact_email ?? '',
+        $sale->phone ?? '',
+        $this->currency((int) ($sale->subtotal_cents ?? 0)),
+        $this->currency((int) ($sale->discount_cents ?? 0)),
+        $this->currency((int) (($sale->discount_cents ?? 0) - ($sale->point_discount_cents ?? 0))),
+        number_format((float) $sale->tax_percent, 2),
+        $this->currency((int) $sale->tax_cents),
+        $this->currency((int) $sale->total_cents),
+        $sale->payment_method === 'bank_transfer'
+          ? $sale->transfer_provider === 'ayapay'
+            ? 'AYA Pay'
+            : 'KBZPay'
+          : ucfirst((string) $sale->payment_method),
+        $sale->amount_received_cents === null
+          ? ''
+          : $this->currency((int) $sale->amount_received_cents),
+        $this->currency((int) $sale->change_cents),
+        Carbon::parse($sale->created_at, 'UTC')
+          ->setTimezone('Asia/Yangon')
+          ->format('Y-m-d H:i:s'),
+      ];
+    };
+    $itemSheet = function ($sale) {
+      return collect($sale->items)->map(fn($i) => [
+        (string) $sale->id,
+        (string) $i->product_id,
+        $i->name,
+        (string) $i->quantity,
+        $this->currency((int) $i->price_cents),
+      ]);
+    };
+    $sheets = [
+      'Summary' => [
+        ['Field', 'Value'],
+        ['Store', 'Kipi POS'],
+        ['Bills', (string) $bills->count()],
+        ['Period', $label],
+        ['Range', $range],
+        ['Timezone', 'Asia/Yangon'],
+        ['Currency', 'MMK'],
+        ['Total MMK', $this->currency((int) $bills->sum('total_cents'))],
+      ],
+      'Bills' => [
+        [
+          'Bill no',
+          'Service',
+          'Table',
+          'Customer',
+          'Email',
+          'Phone',
+          'Subtotal MMK',
+          'Discount MMK',
+          'After points MMK',
+          'Tax %',
+          'Tax MMK',
+          'Paid total MMK',
+          'Payment method',
+          'Received MMK',
+          'Change MMK',
+          'Paid at',
+        ],
+        ...$bills->map($billSheet),
+      ],
+      'Bill items' => [
+        ['Bill no', 'Product ID', 'Item', 'Quantity', 'Unit price MMK'],
+        ...$bills->flatMap($itemSheet),
+      ],
+    ];
+    $path = ExcelExport::create($sheets);
+    return response()
+      ->download($path, 'kipi-bills-' . $label . '.xlsx', [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Cache-Control' => 'private, no-store',
+      ])
+      ->deleteFileAfterSend(true);
+  }
+  public function exportPdf(Request $r)
+  {
+    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange($r);
+    $q = DB::table('sales');
+    if ($from) {
+      $q->where('created_at', '>=', $from);
+    }
+    if ($until) {
+      $q->where('created_at', '<', $until);
+    }
+    $bills = $q->orderBy('id')->get()->map(fn($s) => $this->sale($s->id));
+    $rows = $bills
+      ->map(function ($sale) {
+        $discount = (int) ($sale->discount_cents ?? 0) - (int) ($sale->point_discount_cents ?? 0);
+        return [
+          'Bill' => '#' . str_pad((string) $sale->id, 5, '0', STR_PAD_LEFT),
+          'Date' => Carbon::parse($sale->created_at, 'UTC')
+            ->setTimezone('Asia/Yangon')
+            ->format('Y-m-d H:i'),
+          'Payment' => $this->paymentLabel($sale),
+          'Service' => $this->serviceLabel((string) $sale->service_type),
+          'Subtotal MMK' => $this->currency((int) ($sale->subtotal_cents ?? 0)),
+          'Discount MMK' => $this->currency($discount),
+          'Tax MMK' => $this->currency((int) $sale->tax_cents),
+          'Total MMK' => $this->currency((int) $sale->total_cents),
+        ];
+      })
+      ->values()
+      ->all();
+    $summary = [
+      'Bills' => (string) $bills->count(),
+      'Period' => $label,
+      'Total MMK' => $this->currency((int) $bills->sum('total_cents')),
+    ];
+    $path = BillPdfExport::create($summary, $rows);
+    return response()
+      ->download($path, 'kipi-bills-' . $label . '.pdf', [
+        'Content-Type' => 'application/pdf',
+        'Cache-Control' => 'private, no-store',
+      ])
+      ->deleteFileAfterSend(true);
   }
   public function checkout(Request $r)
   {

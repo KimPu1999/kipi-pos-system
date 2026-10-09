@@ -191,6 +191,8 @@ Route::middleware('web')->group(function () {
         'destroy',
       ]);
       Route::get('/sales', [PosController::class, 'sales']);
+      Route::get('/sales/export', [PosController::class, 'exportExcel']);
+      Route::get('/sales/export-pdf', [PosController::class, 'exportPdf']);
       Route::post('/sales', [PosController::class, 'checkout']);
       Route::patch('/orders/{id}/delivery', [
         \App\Http\Controllers\PortalController::class,
