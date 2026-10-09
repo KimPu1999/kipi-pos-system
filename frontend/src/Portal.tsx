@@ -1208,42 +1208,6 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
               <span className="eyebrow">
                 {admin ? 'A CLEAR VIEW OF YOUR BUSINESS' : 'THE EVERYDAY STORE'}
               </span>
-              <h1>
-                {
-                  (
-                    {
-                      faq: 'Frequently asked questions',
-                      privacy: 'Privacy policy',
-                      settings: admin ? 'System settings' : 'Your settings',
-                      rewards: 'My points & purchases',
-                      tables: 'Dine tables',
-                      billing: 'Billing & receipts',
-                      employees: 'Employees & working hours',
-                      purchases: 'Purchases & receiving',
-                      cashbook: 'Cash in / cash out',
-                      tax: 'Tax management',
-                      notebook: 'Notebook',
-                      reports: 'Sales & inventory',
-                      promotions: 'Promotions & discounts',
-                      home: 'Your everyday dashboard',
-                      dashboard: 'Store overview',
-                      products: 'Product management',
-                      orders: admin ? 'Customer orders' : 'My orders',
-                      customers: 'Customer directory',
-                      account: 'Your account',
-                      bag: 'Your order bag',
-                      shop: 'Something good, every day.',
-                    } as Record<string, string>
-                  )[tab]
-                }
-              </h1>
-              <p>
-                {admin
-                  ? tab === 'dashboard'
-                    ? 'A little clarity for a smoother business day.'
-                    : 'Manage your store, stock and customer orders.'
-                  : 'Browse favorites, order ahead, and collect in store.'}
-              </p>
             </div>
             <button
               className="secondary"

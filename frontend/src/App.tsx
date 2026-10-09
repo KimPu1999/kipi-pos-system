@@ -702,15 +702,6 @@ export default function App({
                       ? 'Inventory'
                       : 'Sales history'}
             </h1>
-            <p>
-              {tab === 'register'
-                ? 'Good things start at the Kipi POS Let’s make a sale.'
-                : tab === 'wishlist'
-                  ? 'Your saved favorites, ready when you need them.'
-                  : tab === 'inventory'
-                    ? 'A little organization. A smoother day.'
-                    : 'Every transaction, all in one place.'}
-            </p>
           </div>
           <div className="date">
             <span className="online" /> Store open{' '}
