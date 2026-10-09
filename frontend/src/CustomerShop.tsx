@@ -1,15 +1,5 @@
 import TableChoice from './TableChoice';
-import {
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  ShoppingBag,
-  Clock,
-  Banknote,
-  ArrowRight,
-  Heart,
-} from './icons';
+import { Search, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Heart } from './icons';
 import PromotionBanners from './PromotionBanners';
 import type { Promotion } from './Promotions';
 import OrderContactFields, { type OrderContact } from './OrderContactFields';
@@ -207,28 +197,6 @@ export default function CustomerShop({
     >
       {view === 'shop' && (
         <section>
-          <div className="store-hero">
-            <div>
-              <span className="eyebrow">YOUR DAILY DOSE OF SOMETHING GOOD</span>
-              <h2>
-                Fresh favorites.
-                <br />
-                One easy pickup.
-              </h2>
-              <p>Choose your treats. We’ll get them ready.</p>
-              <div className="shop-promises">
-                <span>
-                  <Clock size={14} /> Order ahead
-                </span>
-                <span>
-                  <Banknote size={14} /> Pay at pickup
-                </span>
-              </div>
-            </div>
-            <span className="hero-emoji" aria-hidden="true">
-              🥐
-            </span>
-          </div>
           <PromotionBanners products={products} items={promotions} onSelect={setPromotionCode} />
           <div className="shop-catalog-title">
             <h2>Explore the menu</h2>

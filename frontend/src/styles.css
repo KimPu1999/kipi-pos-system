@@ -1167,33 +1167,6 @@ th {
   grid-template-columns: minmax(0, 1fr) 330px;
   gap: 30px;
 }
-.store-hero {
-  position: relative;
-  background: #e7eddc;
-  overflow: hidden;
-  border-radius: 14px;
-  padding: 30px;
-  margin-bottom: 25px;
-}
-.store-hero h2 {
-  font-size: 32px;
-  line-height: 1.35;
-  margin: 15px 0;
-  color: #375334;
-}
-.store-hero p {
-  color: #7b8b6c;
-  font-size: 12px;
-  position: relative;
-  z-index: 1;
-}
-.hero-emoji {
-  position: absolute;
-  right: 30px;
-  top: 30px;
-  font-size: 125px;
-  transform: rotate(-15deg);
-}
 .shop-cart {
   align-self: start;
   position: sticky;
@@ -1276,10 +1249,6 @@ th {
   }
   .store-layout {
     grid-template-columns: minmax(0, 1fr) 290px;
-  }
-  .hero-emoji {
-    opacity: 0.3;
-    right: 0;
   }
   .portal-badge {
     display: none;
@@ -1825,43 +1794,6 @@ th {
 .customer-portal .portal-heading h1 {
   font-size: 28px;
 }
-.customer-shop .store-hero {
-  background: linear-gradient(115deg, #e9eedc, #f3eada);
-  padding: 32px;
-  min-height: 235px;
-}
-.customer-shop .store-hero h2 {
-  font-size: 33px;
-  color: #304e39;
-}
-.customer-shop .store-hero > div {
-  position: relative;
-  z-index: 1;
-  max-width: 75%;
-}
-.customer-shop .hero-emoji {
-  font-size: 135px;
-  right: 25px;
-  top: 38px;
-}
-.customer-shop .store-hero .eyebrow {
-  color: #6b825b;
-  font-size: 8px;
-  letter-spacing: 1.5px;
-}
-.shop-promises {
-  display: flex;
-  gap: 18px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-.shop-promises span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  color: #5c7750;
-}
 .shop-catalog-title {
   display: flex;
   align-items: center;
@@ -1937,7 +1869,9 @@ th {
   background: #ffffffd9;
   color: #8a917f;
   box-shadow: 0 2px 6px #00000012;
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
 }
 .shop-card-heart:hover {
   transform: scale(1.08);
@@ -2103,15 +2037,6 @@ th {
     grid-template-columns: minmax(0, 1fr) 290px;
     gap: 20px;
   }
-  .customer-shop .store-hero {
-    padding: 25px;
-  }
-  .customer-shop .hero-emoji {
-    opacity: 0.25;
-  }
-  .customer-shop .store-hero > div {
-    max-width: 100%;
-  }
 }
 @media (max-width: 700px) {
   .customer-shop.store-layout {
@@ -2139,9 +2064,6 @@ th {
   }
   .customer-shop .product-info h3 {
     font-size: 12px;
-  }
-  .customer-shop .store-hero h2 {
-    font-size: 29px;
   }
   .customer-portal .portal-heading h1 {
     font-size: 25px;
@@ -2992,7 +2914,9 @@ th {
   background: #ffffffd9;
   color: #8a97a3;
   box-shadow: 0 2px 6px #253b520f;
-  transition: color 0.15s, transform 0.15s;
+  transition:
+    color 0.15s,
+    transform 0.15s;
 }
 .pos-app .pos-card-heart:hover {
   transform: scale(1.08);

@@ -409,16 +409,6 @@ h1,
   border-color: #ecd9c4;
   color: #a05d24;
 }
-.customer-shop .store-hero {
-  background: linear-gradient(115deg, #ffe6c7, #fff3df);
-}
-.customer-shop .store-hero h2 {
-  color: #794115;
-}
-.customer-shop .store-hero .eyebrow {
-  color: #ad681e;
-}
-.shop-promises span,
 .pickup-payment {
   color: #a16528;
 }
@@ -1207,7 +1197,7 @@ th {
   color: var(--ink);
   border-color: #594232;
 }
-[data-theme='dark'] :is(.customer-welcome, .store-hero, .promotion-banner) {
+[data-theme='dark'] :is(.customer-welcome, .promotion-banner) {
   background: #382617;
   color: var(--ink);
 }
@@ -1216,8 +1206,6 @@ th {
     .customer-welcome h2,
     .customer-welcome p,
     .customer-welcome .eyebrow,
-    .store-hero h2,
-    .store-hero p,
     .purchase-record summary,
     .purchase-record summary span
   ) {
@@ -1590,7 +1578,6 @@ body {
   :is(
     .notification-item.unread,
     .customer-welcome,
-    .store-hero,
     .promotion-banner,
     .product-summary > div,
     .customer-how-step > span,
@@ -2380,21 +2367,18 @@ body {
 .portal :is(.muted, .portal-heading p, .products-description, .empty, .order-sync, .checkout-note) {
   color: var(--muted);
 }
-.portal :is(.customer-welcome, .store-hero, .promotion-banner) {
+.portal :is(.customer-welcome, .promotion-banner) {
   background: #ffead5;
   color: #392516;
 }
-.portal :is(.customer-welcome, .store-hero, .promotion-banner) :is(h2, h3, p, .eyebrow) {
+.portal :is(.customer-welcome, .promotion-banner) :is(h2, h3, p, .eyebrow) {
   color: #57351b;
 }
-[data-theme='dark'] .portal :is(.customer-welcome, .store-hero, .promotion-banner) {
+[data-theme='dark'] .portal :is(.customer-welcome, .promotion-banner) {
   background: #3b2c20;
   color: #ffead8;
 }
-[data-theme='dark']
-  .portal
-  :is(.customer-welcome, .store-hero, .promotion-banner)
-  :is(h2, h3, p, .eyebrow) {
+[data-theme='dark'] .portal :is(.customer-welcome, .promotion-banner) :is(h2, h3, p, .eyebrow) {
   color: #ffead8;
 }
 .portal
@@ -4740,13 +4724,6 @@ body {
   }
   .portal .cart-item > .cart-line-end {
     margin-left: auto;
-  }
-  .portal .store-hero {
-    padding: 20px;
-    min-height: 0;
-  }
-  .portal .store-hero h2 {
-    font-size: 26px;
   }
   .portal .product-art {
     height: 130px;
