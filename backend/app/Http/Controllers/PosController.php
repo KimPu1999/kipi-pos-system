@@ -15,7 +15,10 @@ class PosController
       'name' => 'required|string|max:100',
       'sku' => 'nullable|string|max:100|unique:products,sku',
       'category' => 'required|string|max:60',
-      'price_cents' => 'required|integer|min:0|max:100000000',
+      'price_cents' => 'nullable|integer|min:0|max:100000000',
+      'small_price_cents' => 'nullable|integer|min:0|max:100000000',
+      'medium_price_cents' => 'nullable|integer|min:0|max:100000000',
+      'large_price_cents' => 'nullable|integer|min:0|max:100000000',
       'stock' => 'required|integer|min:0|max:1000000',
       'emoji' => 'sometimes|string|max:10',
       'active' => 'sometimes|boolean',
@@ -24,6 +27,24 @@ class PosController
     if (empty($data['sku'])) {
       $data['sku'] =
         'PRD-' . strtoupper(str_replace('-', '', (string) \Illuminate\Support\Str::uuid()));
+    }
+    $sizePriceFields = ['small_price_cents', 'medium_price_cents', 'large_price_cents'];
+    $hasSizePrices = collect($sizePriceFields)->contains(
+      fn($field) => array_key_exists($field, $data),
+    );
+    if (!$hasSizePrices && isset($data['price_cents'])) {
+      foreach ($sizePriceFields as $field) {
+        $data[$field] = $data['price_cents'];
+      }
+    }
+    $data['price_cents'] =
+      $data['medium_price_cents'] ??
+      ($data['small_price_cents'] ??
+        ($data['large_price_cents'] ?? ($data['price_cents'] ?? null)));
+    if ($data['price_cents'] === null) {
+      throw ValidationException::withMessages([
+        'prices' => 'Enter a price for at least one size.',
+      ]);
     }
     unset($data['image']);
     $path = $r->hasFile('image') ? $r->file('image')->store('products', 'local') : null;
@@ -95,6 +116,7 @@ class PosController
       'items' => 'required|array|min:1|max:100',
       'items.*.product_id' => 'required|integer|distinct|exists:products,id',
       'items.*.quantity' => 'required|integer|min:1|max:10000',
+      'items.*.size' => 'sometimes|in:small,medium,large',
     ]);
     $sale = DB::transaction(function () use ($data) {
       $service = $data['service_type'] ?? 'takeaway';
@@ -135,12 +157,25 @@ class PosController
         if (!$updated) {
           throw ValidationException::withMessages(['items' => 'Stock changed. Please try again.']);
         }
-        $total += $p->price_cents * $item['quantity'];
+        $size = $item['size'] ?? 'medium';
+        $priceField = $size . '_price_cents';
+        $hasConfiguredSizes =
+          $p->small_price_cents !== null ||
+          $p->medium_price_cents !== null ||
+          $p->large_price_cents !== null;
+        if ($hasConfiguredSizes && $p->$priceField === null) {
+          throw ValidationException::withMessages([
+            'items' => ucfirst($size) . ' is not available for ' . $p->name . '.',
+          ]);
+        }
+        $unitPrice = (int) ($p->$priceField ?? $p->price_cents);
+        $total += $unitPrice * $item['quantity'];
         $lines[] = [
           'product_id' => $p->id,
           'name' => $p->name,
-          'price_cents' => $p->price_cents,
+          'price_cents' => $unitPrice,
           'quantity' => $item['quantity'],
+          'size' => $size,
         ];
       }
       $subtotal = $total;

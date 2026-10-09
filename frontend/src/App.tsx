@@ -26,11 +26,15 @@ type Product = {
   sku: string;
   category: string;
   price_cents: number;
+  small_price_cents: number | null;
+  medium_price_cents: number | null;
+  large_price_cents: number | null;
   stock: number;
   emoji: string;
   image_path: string | null;
   active: boolean | number;
 };
+type ProductSize = 'small' | 'medium' | 'large';
 type Sale = {
   id: number;
   cardholder_name: string | null;
@@ -51,9 +55,9 @@ type Sale = {
   change_cents: number;
   payment_method: string;
   created_at: string;
-  items: { name: string; quantity: number; price_cents: number }[];
+  items: { name: string; quantity: number; price_cents: number; size: ProductSize }[];
 };
-type CartItem = { product: Product; quantity: number };
+type CartItem = { product: Product; quantity: number; size: ProductSize };
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -62,6 +66,43 @@ const money = (c: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(c / 100);
+const sizePrice = (product: Product, size: ProductSize) =>
+  (size === 'small'
+    ? product.small_price_cents
+    : size === 'large'
+      ? product.large_price_cents
+      : product.medium_price_cents) ?? product.price_cents;
+const availableSizes = (product: Product): ProductSize[] => {
+  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
+    const price =
+      size === 'small'
+        ? product.small_price_cents
+        : size === 'large'
+          ? product.large_price_cents
+          : product.medium_price_cents;
+    return price !== null && price !== undefined;
+  });
+  return sizes.length ? [...sizes] : ['medium'];
+};
+const defaultSize = (product: Product): ProductSize => {
+  const sizes = availableSizes(product);
+  return sizes.includes('medium') ? 'medium' : sizes[0];
+};
+const sizePriceInput = (product: Product | null, size: ProductSize) => {
+  if (!product) return '';
+  const price =
+    size === 'small'
+      ? product.small_price_cents
+      : size === 'large'
+        ? product.large_price_cents
+        : product.medium_price_cents;
+  return price === null ? '' : (price ?? product.price_cents) / 100;
+};
+const cartItemWithProduct = (item: CartItem, product: Product): CartItem => ({
+  ...item,
+  product,
+  size: availableSizes(product).includes(item.size) ? item.size : defaultSize(product),
+});
 export default function App({
   user,
   logout,
@@ -221,8 +262,20 @@ export default function App({
     data.set('sku', editProduct.sku);
     data.set('expected_stock', String(editProduct.stock));
     data.set('active', data.has('active') ? '1' : '0');
-    data.set('price_cents', String(Math.round(Number(data.get('price')) * 100)));
-    data.delete('price');
+    for (const size of ['small', 'medium', 'large']) {
+      const value = String(data.get(`${size}_price`) || '').trim();
+      data.set(`${size}_price_cents`, value === '' ? '' : String(Math.round(Number(value) * 100)));
+      data.delete(`${size}_price`);
+    }
+    data.set(
+      'price_cents',
+      String(
+        data.get('medium_price_cents') ||
+          data.get('small_price_cents') ||
+          data.get('large_price_cents') ||
+          '',
+      ),
+    );
     const image = data.get('image');
     if (image instanceof File && !image.size) data.delete('image');
     try {
@@ -236,7 +289,9 @@ export default function App({
         ...(saved.active ? [saved] : []),
       ]);
       setCart((items) =>
-        items.map((item) => (item.product.id === saved.id ? { ...item, product: saved } : item)),
+        items.map((item) =>
+          item.product.id === saved.id ? cartItemWithProduct(item, saved) : item,
+        ),
       );
       setEditProduct(null);
       setStockNotice('Product updated. SKU stays unchanged.');
@@ -268,7 +323,9 @@ export default function App({
       );
       setCart((items) =>
         saved.active
-          ? items.map((item) => (item.product.id === saved.id ? { ...item, product: saved } : item))
+          ? items.map((item) =>
+              item.product.id === saved.id ? cartItemWithProduct(item, saved) : item,
+            )
           : items.filter((item) => item.product.id !== saved.id),
       );
       setStockNotice(`${saved.name} is now ${saved.active ? 'active' : 'inactive'}.`);
@@ -334,14 +391,14 @@ export default function App({
     setProducts(p.filter((x) => x.active));
     setSales(s);
     setCart((c) =>
-      c.map((i) => ({
-        ...i,
-        product: p.find((x) => x.id === i.product.id) || {
+      c.map((i) => {
+        const product = p.find((x) => x.id === i.product.id) || {
           ...i.product,
           active: false,
           stock: 0,
-        },
-      })),
+        };
+        return cartItemWithProduct(i, product);
+      }),
     );
   }
   useEffect(() => {
@@ -356,8 +413,12 @@ export default function App({
       if ((old?.quantity || 0) >= p.stock) return c;
       return old
         ? c.map((i) => (i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i))
-        : [...c, { product: p, quantity: 1 }];
+        : [...c, { product: p, quantity: 1, size: defaultSize(p) }];
     });
+  }
+  function setItemSize(id: number, size: ProductSize) {
+    if (submitting.current) return;
+    setCart((items) => items.map((item) => (item.product.id === id ? { ...item, size } : item)));
   }
   function quantity(id: number, delta: number) {
     if (submitting.current) return;
@@ -371,7 +432,7 @@ export default function App({
         .filter((i) => i.quantity > 0),
     );
   }
-  const subtotal = cart.reduce((s, i) => s + i.product.price_cents * i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + sizePrice(i.product, i.size) * i.quantity, 0);
   const discountPercent = customDiscount.trim() === '' ? 0 : Number(customDiscount);
   const validDiscount =
     Number.isFinite(discountPercent) && discountPercent >= 0 && discountPercent <= 100;
@@ -425,6 +486,7 @@ export default function App({
           items: cart.map((i) => ({
             product_id: i.product.id,
             quantity: i.quantity,
+            size: i.size,
           })),
         }),
       });
@@ -468,8 +530,20 @@ export default function App({
     }
   }
   function productForm(d: FormData) {
-    d.set('price_cents', String(Math.round(Number(d.get('price')) * 100)));
-    d.delete('price');
+    for (const size of ['small', 'medium', 'large']) {
+      const value = String(d.get(`${size}_price`) || '').trim();
+      d.set(`${size}_price_cents`, value === '' ? '' : String(Math.round(Number(value) * 100)));
+      d.delete(`${size}_price`);
+    }
+    d.set(
+      'price_cents',
+      String(
+        d.get('medium_price_cents') ||
+          d.get('small_price_cents') ||
+          d.get('large_price_cents') ||
+          '',
+      ),
+    );
     d.set('emoji', '📦');
     const file = d.get('image');
     if (file instanceof File && !file.size) d.delete('image');
@@ -767,7 +841,24 @@ export default function App({
                         </span>
                         <div className="cart-item-info">
                           <b>{i.product.name}</b>
-                          <small>{money(i.product.price_cents)}</small>
+                          <small>{money(sizePrice(i.product, i.size))}</small>
+                          <fieldset className="pos-size-picker">
+                            <legend>Size</legend>
+                            <div>
+                              {availableSizes(i.product).map((size) => (
+                                <button
+                                  type="button"
+                                  key={size}
+                                  className={i.size === size ? 'selected' : ''}
+                                  aria-pressed={i.size === size}
+                                  disabled={busy}
+                                  onClick={() => setItemSize(i.product.id, size)}
+                                >
+                                  {size.charAt(0).toUpperCase() + size.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </fieldset>
                           <div className="stepper">
                             <button
                               disabled={busy}
@@ -796,7 +887,7 @@ export default function App({
                           </div>
                         </div>
                         <div>
-                          <b>{money(i.product.price_cents * i.quantity)}</b>
+                          <b>{money(sizePrice(i.product, i.size) * i.quantity)}</b>
                           <button
                             disabled={busy}
                             className="remove"
@@ -975,7 +1066,9 @@ export default function App({
               {[
                 ['name', 'Product name', 'text'],
                 ['sku', 'SKU / barcode', 'text'],
-                ['price', 'Price (MMK)', 'number'],
+                ['small_price', 'Small price (MMK)', 'number'],
+                ['medium_price', 'Medium price (MMK)', 'number'],
+                ['large_price', 'Large price (MMK)', 'number'],
                 ['stock', 'Stock quantity', 'number'],
               ].map(([name, label, type]) => (
                 <label key={name}>
@@ -984,12 +1077,15 @@ export default function App({
                     name={name}
                     type={type}
                     defaultValue={name === 'sku' ? productSku() : undefined}
-                    required
+                    required={!name.includes('price')}
                     min={type === 'number' ? 0 : undefined}
-                    step={name === 'price' ? '.01' : type === 'number' ? '1' : undefined}
+                    step={name.includes('price') ? '.01' : type === 'number' ? '1' : undefined}
                   />
                 </label>
               ))}
+              <p className="muted size-price-help">
+                Enter at least one size price. Leave a price blank to hide that size.
+              </p>
               <label className="inventory-category-field">
                 Category
                 <input
@@ -1043,7 +1139,7 @@ export default function App({
                     <th>Product</th>
                     <th>SKU</th>
                     <th>Category</th>
-                    <th>Price</th>
+                    <th>Size prices</th>
                     <th>Available</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -1057,7 +1153,19 @@ export default function App({
                       </td>
                       <td>{p.sku}</td>
                       <td>{p.category}</td>
-                      <td>{money(p.price_cents)}</td>
+                      <td>
+                        <span className="product-size-prices">
+                          {p.small_price_cents !== null && (
+                            <span>S {money(p.small_price_cents)}</span>
+                          )}
+                          {p.medium_price_cents !== null && (
+                            <span>M {money(p.medium_price_cents)}</span>
+                          )}
+                          {p.large_price_cents !== null && (
+                            <span>L {money(p.large_price_cents)}</span>
+                          )}
+                        </span>
+                      </td>
                       <td>
                         <span className={p.stock < 5 ? 'low' : 'stock'}>{p.stock} units</span>
                       </td>
@@ -1233,7 +1341,14 @@ export default function App({
             {[
               ['name', 'Product name', editProduct?.name || '', 'text'],
               ['category', 'Category', editProduct?.category || '', 'text'],
-              ['price', 'Price (MMK)', (editProduct?.price_cents || 0) / 100, 'number'],
+              ['small_price', 'Small price (MMK)', sizePriceInput(editProduct, 'small'), 'number'],
+              [
+                'medium_price',
+                'Medium price (MMK)',
+                sizePriceInput(editProduct, 'medium'),
+                'number',
+              ],
+              ['large_price', 'Large price (MMK)', sizePriceInput(editProduct, 'large'), 'number'],
               ['stock', 'Available stock', editProduct?.stock || 0, 'number'],
               ['emoji', 'Product icon', editProduct?.emoji || '📦', 'text'],
             ].map(([name, label, value, type]) => (
@@ -1244,10 +1359,12 @@ export default function App({
                   type={String(type)}
                   defaultValue={value}
                   list={name === 'category' ? 'pos-category-options' : undefined}
-                  required
+                  required={!String(name).includes('price')}
                   disabled={busy}
                   min={type === 'number' ? 0 : undefined}
-                  step={name === 'price' ? '0.01' : type === 'number' ? '1' : undefined}
+                  step={
+                    String(name).includes('price') ? '0.01' : type === 'number' ? '1' : undefined
+                  }
                   maxLength={name === 'category' ? 60 : name === 'emoji' ? 10 : 100}
                 />
                 {name === 'category' && (
@@ -1255,6 +1372,9 @@ export default function App({
                 )}
               </label>
             ))}
+            <p className="muted size-price-help">
+              Enter at least one size price. Leave a price blank to hide that size.
+            </p>
             <label>
               Replace image (optional)
               <input
@@ -1467,7 +1587,8 @@ export default function App({
               {receipt.items.map((i, n) => (
                 <div className="receipt-line" key={n}>
                   <span>
-                    {i.quantity} × {i.name}
+                    {i.quantity} × {i.name} ·{' '}
+                    {(i.size || 'medium').charAt(0).toUpperCase() + (i.size || 'medium').slice(1)}
                   </span>
                   <b>{money(i.quantity * i.price_cents)}</b>
                 </div>

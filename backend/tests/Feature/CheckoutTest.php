@@ -47,6 +47,41 @@ class CheckoutTest extends TestCase
     $this->postJson('/api/sales', [...$body, 'discount_percent' => 101])->assertUnprocessable();
     $this->postJson('/api/sales', [...$body, 'discount_percent' => -1])->assertUnprocessable();
   }
+  public function test_pos_sale_records_the_selected_product_size(): void
+  {
+    $id = $this->product();
+    DB::table('products')
+      ->where('id', $id)
+      ->update([
+        'small_price_cents' => 300,
+        'medium_price_cents' => 450,
+        'large_price_cents' => 700,
+      ]);
+    $this->postJson('/api/sales', [
+      'payment_method' => 'cash',
+      'items' => [['product_id' => $id, 'quantity' => 1, 'size' => 'small']],
+    ])
+      ->assertCreated()
+      ->assertJsonPath('items.0.size', 'small')
+      ->assertJsonPath('items.0.price_cents', 300)
+      ->assertJsonPath('total_cents', 300);
+    $this->assertDatabaseHas('sale_items', [
+      'product_id' => $id,
+      'size' => 'small',
+      'price_cents' => 300,
+    ]);
+    $this->postJson('/api/sales', [
+      'payment_method' => 'cash',
+      'items' => [['product_id' => $id, 'quantity' => 1, 'size' => 'extra_large']],
+    ])->assertUnprocessable();
+    DB::table('products')
+      ->where('id', $id)
+      ->update(['medium_price_cents' => null, 'large_price_cents' => null]);
+    $this->postJson('/api/sales', [
+      'payment_method' => 'cash',
+      'items' => [['product_id' => $id, 'quantity' => 1, 'size' => 'medium']],
+    ])->assertUnprocessable();
+  }
   public function test_configured_tax_is_applied_after_discount(): void
   {
     DB::table('system_settings')->insert([

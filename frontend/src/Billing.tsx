@@ -30,7 +30,13 @@ type Bill = {
   promotion_code: string | null;
   amount_received_cents: number | null;
   change_cents: number;
-  items: { id: number; name: string; quantity: number; price_cents: number }[];
+  items: {
+    id: number;
+    name: string;
+    quantity: number;
+    price_cents: number;
+    size: 'small' | 'medium' | 'large' | null;
+  }[];
 };
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', {
@@ -283,7 +289,9 @@ export default function Billing({
                 <tbody>
                   {selected.items.map((i) => (
                     <tr key={i.id}>
-                      <td>{i.name}</td>
+                      <td>
+                        {i.name} · {(i.size || 'medium').replace(/^./, (c) => c.toUpperCase())}
+                      </td>
                       <td>{i.quantity}</td>
                       <td>{money(i.price_cents)}</td>
                       <td>{money(i.quantity * i.price_cents)}</td>

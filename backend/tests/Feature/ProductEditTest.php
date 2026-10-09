@@ -55,6 +55,9 @@ class ProductEditTest extends TestCase
         '_method' => 'PUT',
         'name' => 'Latte',
         'price_cents' => '550',
+        'small_price_cents' => '400',
+        'medium_price_cents' => '550',
+        'large_price_cents' => '700',
         'stock' => '12',
         'active' => '0',
       ],
@@ -66,6 +69,9 @@ class ProductEditTest extends TestCase
       'id' => $id,
       'name' => 'Latte',
       'price_cents' => 550,
+      'small_price_cents' => 400,
+      'medium_price_cents' => 550,
+      'large_price_cents' => 700,
       'stock' => 12,
       'active' => 0,
     ]);
@@ -78,6 +84,30 @@ class ProductEditTest extends TestCase
       'stock' => 12,
       'active' => 1,
     ]);
+  }
+  public function test_one_size_price_can_be_saved_and_other_options_stay_disabled(): void
+  {
+    $product = [
+      ...$this->body(),
+      'price_cents' => 400,
+      'small_price_cents' => 400,
+      'medium_price_cents' => null,
+      'large_price_cents' => null,
+    ];
+    $this->postJson('/api/products', $product)
+      ->assertCreated()
+      ->assertJsonPath('price_cents', 400)
+      ->assertJsonPath('small_price_cents', 400)
+      ->assertJsonPath('medium_price_cents', null)
+      ->assertJsonPath('large_price_cents', null);
+    $this->postJson('/api/products', [
+      ...$this->body(),
+      'sku' => 'NO-PRICE',
+      'price_cents' => null,
+      'small_price_cents' => null,
+      'medium_price_cents' => null,
+      'large_price_cents' => null,
+    ])->assertUnprocessable();
   }
   public function test_activation_validation_and_customer_permissions(): void
   {

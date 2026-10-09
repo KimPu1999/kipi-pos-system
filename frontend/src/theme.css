@@ -7484,6 +7484,39 @@ body {
   font-size: 13px;
   font-weight: 850;
 }
+.customer-bag-page .bag-size-picker {
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+}
+.customer-bag-page .bag-size-picker legend {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+.customer-bag-page .bag-size-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.customer-bag-page .bag-size-picker button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 1px solid var(--box-border);
+  border-radius: 8px;
+  background: var(--column-bg);
+  color: var(--box-text);
+  font-size: 11px;
+  font-weight: 800;
+}
+.customer-bag-page .bag-size-picker button.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
 .customer-bag-page .customer-cart-item .stepper {
   margin-top: 10px;
 }

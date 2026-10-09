@@ -128,6 +128,7 @@ class PortalController
       'items' => 'required|array|min:1|max:100',
       'items.*.product_id' => 'required|integer|distinct|exists:products,id',
       'items.*.quantity' => 'required|integer|min:1|max:10000',
+      'items.*.size' => 'sometimes|in:small,medium,large',
     ]);
     $o = DB::transaction(function () use ($d, $r) {
       $total = 0;
@@ -147,12 +148,25 @@ class PortalController
         ) {
           throw ValidationException::withMessages(['items' => 'Stock changed. Please retry.']);
         }
-        $total += $p->price_cents * $i['quantity'];
+        $size = $i['size'] ?? 'medium';
+        $priceField = $size . '_price_cents';
+        $hasConfiguredSizes =
+          $p->small_price_cents !== null ||
+          $p->medium_price_cents !== null ||
+          $p->large_price_cents !== null;
+        if ($hasConfiguredSizes && $p->$priceField === null) {
+          throw ValidationException::withMessages([
+            'items' => ucfirst($size) . ' is not available for ' . $p->name . '.',
+          ]);
+        }
+        $unitPrice = (int) ($p->$priceField ?? $p->price_cents);
+        $total += $unitPrice * $i['quantity'];
         $lines[] = [
           'product_id' => $p->id,
           'name' => $p->name,
-          'price_cents' => $p->price_cents,
+          'price_cents' => $unitPrice,
           'quantity' => $i['quantity'],
+          'size' => $size,
         ];
       }
       $discount = PromotionController::discount($total, $d['promotion_code'] ?? null, $lines);
@@ -207,6 +221,7 @@ class PortalController
       'items' => 'required|array|min:1|max:100',
       'items.*.product_id' => 'required|integer|distinct|exists:products,id',
       'items.*.quantity' => 'required|integer|min:1|max:10000',
+      'items.*.size' => 'sometimes|in:small,medium,large',
     ]);
     return response()->json(
       DB::transaction(function () use ($r, $id, $d) {
@@ -238,13 +253,26 @@ class PortalController
             ]);
           }
           DB::table('products')->where('id', $p->id)->decrement('stock', $i['quantity']);
-          $total += $p->price_cents * $i['quantity'];
+          $size = $i['size'] ?? 'medium';
+          $priceField = $size . '_price_cents';
+          $hasConfiguredSizes =
+            $p->small_price_cents !== null ||
+            $p->medium_price_cents !== null ||
+            $p->large_price_cents !== null;
+          if ($hasConfiguredSizes && $p->$priceField === null) {
+            throw ValidationException::withMessages([
+              'items' => ucfirst($size) . ' is not available for ' . $p->name . '.',
+            ]);
+          }
+          $unitPrice = (int) ($p->$priceField ?? $p->price_cents);
+          $total += $unitPrice * $i['quantity'];
           $lines[] = [
             'order_id' => $id,
             'product_id' => $p->id,
             'name' => $p->name,
-            'price_cents' => $p->price_cents,
+            'price_cents' => $unitPrice,
             'quantity' => $i['quantity'],
+            'size' => $size,
           ];
         }
         DB::table('order_items')->where('order_id', $id)->delete();
@@ -527,6 +555,7 @@ class PortalController
                   'name' => $i->name,
                   'quantity' => $i->quantity,
                   'price_cents' => $i->price_cents,
+                  'size' => $i->size,
                 ],
               )
               ->all(),
@@ -560,13 +589,33 @@ class PortalController
         Rule::in([DB::table('products')->where('id', $id)->value('sku')]),
       ],
       'category' => 'required|string|max:60',
-      'price_cents' => 'required|integer|min:0|max:100000000',
+      'price_cents' => 'nullable|integer|min:0|max:100000000',
+      'small_price_cents' => 'nullable|integer|min:0|max:100000000',
+      'medium_price_cents' => 'nullable|integer|min:0|max:100000000',
+      'large_price_cents' => 'nullable|integer|min:0|max:100000000',
       'expected_stock' => 'sometimes|integer|min:0|max:1000000',
       'stock' => 'required|integer|min:0|max:1000000',
       'emoji' => 'required|string|max:10',
       'active' => 'required|boolean',
       'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
     ]);
+    $sizePriceFields = ['small_price_cents', 'medium_price_cents', 'large_price_cents'];
+    $hasSizePrices = collect($sizePriceFields)->contains(
+      fn($field) => array_key_exists($field, $d),
+    );
+    if (!$hasSizePrices && isset($d['price_cents'])) {
+      foreach ($sizePriceFields as $field) {
+        $d[$field] = $d['price_cents'];
+      }
+    }
+    $d['price_cents'] =
+      $d['medium_price_cents'] ??
+      ($d['small_price_cents'] ?? ($d['large_price_cents'] ?? ($d['price_cents'] ?? null)));
+    if ($d['price_cents'] === null) {
+      throw ValidationException::withMessages([
+        'prices' => 'Enter a price for at least one size.',
+      ]);
+    }
     unset($d['image']);
     $expected = $d['expected_stock'] ?? null;
     unset($d['expected_stock']);

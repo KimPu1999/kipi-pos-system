@@ -9,11 +9,15 @@ type Product = {
   sku: string;
   category: string;
   price_cents: number;
+  small_price_cents: number | null;
+  medium_price_cents: number | null;
+  large_price_cents: number | null;
   stock: number;
   emoji: string;
   image_path: string | null;
   active: boolean | number;
 };
+export type ProductSize = 'small' | 'medium' | 'large';
 type Props = {
   taxPercent: number;
   view: 'shop' | 'bag';
@@ -45,6 +49,8 @@ type Props = {
   products: Product[];
   cart: Record<number, number>;
   setCart: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  sizes: Record<number, ProductSize>;
+  setSizes: React.Dispatch<React.SetStateAction<Record<number, ProductSize>>>;
   search: string;
   setSearch: (value: string) => void;
   category: string;
@@ -63,6 +69,37 @@ const money = (value: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value / 100);
+const sizePrice = (product: Product, size: ProductSize) =>
+  (size === 'small'
+    ? product.small_price_cents
+    : size === 'large'
+      ? product.large_price_cents
+      : product.medium_price_cents) ?? product.price_cents;
+const availableSizes = (product: Product): ProductSize[] => {
+  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
+    const price =
+      size === 'small'
+        ? product.small_price_cents
+        : size === 'large'
+          ? product.large_price_cents
+          : product.medium_price_cents;
+    return price !== null && price !== undefined;
+  });
+  return sizes.length ? [...sizes] : ['medium'];
+};
+const selectedSize = (product: Product, size?: ProductSize) => {
+  const available = availableSizes(product);
+  return size && available.includes(size)
+    ? size
+    : available.includes('medium')
+      ? 'medium'
+      : available[0];
+};
+const shopPrice = (product: Product) => {
+  const available = availableSizes(product);
+  const price = Math.min(...available.map((size) => sizePrice(product, size)));
+  return `${available.length > 1 ? 'From ' : ''}${money(price)}`;
+};
 export default function CustomerShop({
   taxPercent,
   view,
@@ -88,6 +125,8 @@ export default function CustomerShop({
   products,
   cart,
   setCart,
+  sizes,
+  setSizes,
   search,
   setSearch,
   category,
@@ -104,7 +143,10 @@ export default function CustomerShop({
       `${p.name} ${p.sku}`.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const count = Object.values(cart).reduce((sum, n) => sum + n, 0);
-  const total = products.reduce((sum, p) => sum + p.price_cents * (cart[p.id] || 0), 0);
+  const total = products.reduce(
+    (sum, p) => sum + sizePrice(p, selectedSize(p, sizes[p.id])) * (cart[p.id] || 0),
+    0,
+  );
   const promo = promotions.find(
     (p) =>
       p.code === promotionCode.trim().toUpperCase() &&
@@ -116,7 +158,10 @@ export default function CustomerShop({
         (p) => cart[p.id] && (!promo.product_ids.length || promo.product_ids.includes(p.id)),
       )
     : [];
-  const eligibleTotal = eligible.reduce((n, p) => n + p.price_cents * cart[p.id], 0);
+  const eligibleTotal = eligible.reduce(
+    (n, p) => n + sizePrice(p, selectedSize(p, sizes[p.id])) * cart[p.id],
+    0,
+  );
   const discount = promo ? Math.min(total, Math.round((eligibleTotal * promo.percent) / 100)) : 0;
   const tax = Math.round(((total - discount) * taxPercent) / 100),
     grandTotal = total - discount + tax;
@@ -130,6 +175,11 @@ export default function CustomerShop({
       delete next[id];
       return next;
     });
+    setSizes((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
   }
   function change(p: Product, delta: number) {
     setCart((c) => {
@@ -139,6 +189,15 @@ export default function CustomerShop({
       else if (quantity <= p.stock) next[p.id] = quantity;
       return next;
     });
+    if (delta > 0) {
+      setSizes((current) => (current[p.id] ? current : { ...current, [p.id]: selectedSize(p) }));
+    } else if ((cart[p.id] || 0) + delta <= 0) {
+      setSizes((current) => {
+        const next = { ...current };
+        delete next[p.id];
+        return next;
+      });
+    }
   }
   return (
     <div
@@ -236,7 +295,7 @@ export default function CustomerShop({
                       </span>
                     ))}
                   <div>
-                    <b>{money(p.price_cents)}</b>
+                    <b>{shopPrice(p)}</b>
                     <button
                       className="shop-add"
                       aria-label={`Add ${p.name} to order`}
@@ -302,6 +361,7 @@ export default function CustomerShop({
                   disabled={busy}
                   onClick={() => {
                     setCart({});
+                    setSizes({});
                     setNote('');
                   }}
                 >
@@ -326,33 +386,56 @@ export default function CustomerShop({
                     <b>{p?.name || 'Unavailable product'}</b>
                     {p && <span className="customer-cart-category">{p.category}</span>}
                     <small className="customer-unit-price">
-                      {p ? `${money(p.price_cents)} each` : 'Remove this item to continue'}
+                      {p
+                        ? `${money(sizePrice(p, selectedSize(p, sizes[p.id])))} each`
+                        : 'Remove this item to continue'}
                     </small>
                     {p && (
-                      <div className="stepper">
-                        <button
-                          aria-label={`Remove one ${p.name}`}
-                          disabled={busy}
-                          onClick={() => change(p, -1)}
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <span>{n}</span>
-                        <button
-                          aria-label={`Add one ${p.name}`}
-                          disabled={busy || n >= p.stock}
-                          onClick={() => change(p, 1)}
-                        >
-                          <Plus size={13} />
-                        </button>
-                      </div>
+                      <>
+                        <fieldset className="bag-size-picker">
+                          <legend>Choose size</legend>
+                          <div>
+                            {availableSizes(p).map((size) => (
+                              <button
+                                type="button"
+                                key={size}
+                                className={selectedSize(p, sizes[p.id]) === size ? 'selected' : ''}
+                                aria-pressed={selectedSize(p, sizes[p.id]) === size}
+                                disabled={busy}
+                                onClick={() =>
+                                  setSizes((current) => ({ ...current, [p.id]: size }))
+                                }
+                              >
+                                {size.charAt(0).toUpperCase() + size.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </fieldset>
+                        <div className="stepper">
+                          <button
+                            aria-label={`Remove one ${p.name}`}
+                            disabled={busy}
+                            onClick={() => change(p, -1)}
+                          >
+                            <Minus size={13} />
+                          </button>
+                          <span>{n}</span>
+                          <button
+                            aria-label={`Add one ${p.name}`}
+                            disabled={busy || n >= p.stock}
+                            onClick={() => change(p, 1)}
+                          >
+                            <Plus size={13} />
+                          </button>
+                        </div>
+                      </>
                     )}
                   </div>
                   <div className="cart-line-end">
                     {p && (
                       <span className="customer-line-price">
                         <small>Item total</small>
-                        <b>{money(p.price_cents * n)}</b>
+                        <b>{money(sizePrice(p, selectedSize(p, sizes[p.id])) * n)}</b>
                       </span>
                     )}
                     <button

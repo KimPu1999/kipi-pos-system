@@ -19,7 +19,7 @@ import { api, type User } from './api';
 import App from './App';
 import ThemeToggle from './ThemeToggle';
 import { productSku } from './productSku';
-import CustomerShop from './CustomerShop';
+import CustomerShop, { type ProductSize } from './CustomerShop';
 import Reports from './Reports';
 import Purchases from './Purchases';
 import CashBook from './CashBook';
@@ -47,6 +47,9 @@ type Product = {
   sku: string;
   category: string;
   price_cents: number;
+  small_price_cents: number | null;
+  medium_price_cents: number | null;
+  large_price_cents: number | null;
   stock: number;
   emoji: string;
   image_path: string | null;
@@ -97,7 +100,13 @@ type Order = {
   customer_email: string;
   note: string | null;
   created_at: string;
-  items: { product_id: number; name: string; quantity: number; price_cents: number }[];
+  items: {
+    product_id: number;
+    name: string;
+    quantity: number;
+    price_cents: number;
+    size: ProductSize;
+  }[];
 };
 type Dashboard = {
   revenue_cents: number;
@@ -115,6 +124,34 @@ const money = (c: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(c / 100);
+const availableProductSizes = (product: Product): ProductSize[] => {
+  const sizes = (['small', 'medium', 'large'] as const).filter((size) => {
+    const price =
+      size === 'small'
+        ? product.small_price_cents
+        : size === 'large'
+          ? product.large_price_cents
+          : product.medium_price_cents;
+    return price !== null && price !== undefined;
+  });
+  return sizes.length ? [...sizes] : ['medium'];
+};
+const defaultProductSize = (product: Product): ProductSize => {
+  const sizes = availableProductSizes(product);
+  return sizes.includes('medium') ? 'medium' : sizes[0];
+};
+const selectedProductSize = (product: Product, size?: ProductSize): ProductSize =>
+  size && availableProductSizes(product).includes(size) ? size : defaultProductSize(product);
+const sizePriceInput = (product: Product | null, size: ProductSize) => {
+  if (!product) return '';
+  const price =
+    size === 'small'
+      ? product.small_price_cents
+      : size === 'large'
+        ? product.large_price_cents
+        : product.medium_price_cents;
+  return price === null ? '' : (price ?? product.price_cents) / 100;
+};
 export default function Portal({ user, logout }: { user: User; logout: ReactNode }) {
   const portalRef = useRef<HTMLDivElement>(null);
   const portalHeaderRef = useRef<HTMLDivElement>(null);
@@ -211,6 +248,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     [search, setSearch] = useState(''),
     [filter, setFilter] = useState('All'),
     [cart, setCart] = useState<Record<number, number>>({}),
+    [sizes, setSizes] = useState<Record<number, ProductSize>>({}),
     [note, setNote] = useState(''),
     [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
@@ -450,7 +488,9 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
   }
 
   const [editOrder, setEditOrder] = useState<Order | null>(null);
-  const [editItems, setEditItems] = useState<{ product_id: number; quantity: number }[]>([]);
+  const [editItems, setEditItems] = useState<
+    { product_id: number; quantity: number; size: ProductSize }[]
+  >([]);
   const [editNote, setEditNote] = useState('');
   const orderEditor = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -460,7 +500,13 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
   function openOrderEdit(o: Order) {
     setError('');
     setEditOrder(o);
-    setEditItems(o.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })));
+    setEditItems(
+      o.items.map((i) => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+        size: i.size || 'medium',
+      })),
+    );
     setEditNote(o.note || '');
     setEditPromotion(o.promotion_code || '');
     setEditServiceType(o.service_type);
@@ -677,10 +723,15 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
             items: Object.entries(cart).map(([id, quantity]) => ({
               product_id: Number(id),
               quantity,
+              size: selectedProductSize(
+                products.find((product) => product.id === Number(id))!,
+                sizes[Number(id)],
+              ),
             })),
           }),
         });
         setCart({});
+        setSizes({});
         setNote('');
         setPromotionCode('');
         setPaymentChoice('cash');
@@ -696,8 +747,20 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
   async function saveProduct(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
-    d.set('price_cents', String(Math.round(Number(d.get('price')) * 100)));
-    d.delete('price');
+    for (const size of ['small', 'medium', 'large']) {
+      const value = String(d.get(`${size}_price`) || '').trim();
+      d.set(`${size}_price_cents`, value === '' ? '' : String(Math.round(Number(value) * 100)));
+      d.delete(`${size}_price`);
+    }
+    d.set(
+      'price_cents',
+      String(
+        d.get('medium_price_cents') ||
+          d.get('small_price_cents') ||
+          d.get('large_price_cents') ||
+          '',
+      ),
+    );
     d.set('active', d.get('active') === 'on' ? '1' : '0');
     const file = d.get('image');
     if (file instanceof File && !file.size) d.delete('image');
@@ -714,6 +777,11 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
     await action(async () => {
       await api(`/products/${product.id}/permanent`, { method: 'DELETE' });
       setCart((current) => {
+        const next = { ...current };
+        delete next[product.id];
+        return next;
+      });
+      setSizes((current) => {
         const next = { ...current };
         delete next[product.id];
         return next;
@@ -1121,7 +1189,24 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                     ['name', 'Name', editing?.name || '', 'text'],
                     ['sku', 'SKU', editing?.sku || productSku(), 'text'],
                     ['category', 'Category', editing?.category || '', 'text'],
-                    ['price', 'Price (MMK)', editing ? editing.price_cents / 100 : '', 'number'],
+                    [
+                      'small_price',
+                      'Small price (MMK)',
+                      sizePriceInput(editing, 'small'),
+                      'number',
+                    ],
+                    [
+                      'medium_price',
+                      'Medium price (MMK)',
+                      sizePriceInput(editing, 'medium'),
+                      'number',
+                    ],
+                    [
+                      'large_price',
+                      'Large price (MMK)',
+                      sizePriceInput(editing, 'large'),
+                      'number',
+                    ],
                     ['stock', 'Available stock', editing?.stock ?? 0, 'number'],
                     ['emoji', 'Product emoji', editing?.emoji || '📦', 'text'],
                   ].map(([name, label, value, type]) => (
@@ -1132,12 +1217,22 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                         type={String(type)}
                         defaultValue={value}
                         readOnly={name === 'sku' && !!editing}
-                        required
+                        required={!String(name).includes('price')}
                         min={type === 'number' ? 0 : undefined}
-                        step={name === 'price' ? '.01' : type === 'number' ? '1' : undefined}
+                        step={
+                          String(name).includes('price')
+                            ? '.01'
+                            : type === 'number'
+                              ? '1'
+                              : undefined
+                        }
                       />
                     </label>
                   ))}
+                  <p className="muted size-price-help">
+                    Enter at least one size price. Leave a price blank to hide that size from the
+                    shop.
+                  </p>
                   <label className="image-upload">
                     Product image
                     <input
@@ -1189,7 +1284,7 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                     <tr>
                       <th>Product</th>
                       <th>SKU</th>
-                      <th>Price</th>
+                      <th>Size prices</th>
                       <th>Available</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -1216,7 +1311,19 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                           </div>
                         </td>
                         <td>{p.sku}</td>
-                        <td>{money(p.price_cents)}</td>
+                        <td>
+                          <span className="product-size-prices">
+                            {p.small_price_cents !== null && (
+                              <span>S {money(p.small_price_cents)}</span>
+                            )}
+                            {p.medium_price_cents !== null && (
+                              <span>M {money(p.medium_price_cents)}</span>
+                            )}
+                            {p.large_price_cents !== null && (
+                              <span>L {money(p.large_price_cents)}</span>
+                            )}
+                          </span>
+                        </td>
                         <td>
                           <span
                             className={
@@ -1401,6 +1508,8 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
               products={products}
               cart={cart}
               setCart={setCart}
+              sizes={sizes}
+              setSizes={setSizes}
               search={search}
               setSearch={setSearch}
               category={filter}
@@ -1616,7 +1725,9 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                       {o.items.map((i, n) => (
                         <div className="receipt-line" key={n}>
                           <span>
-                            {i.quantity} × {i.name}
+                            {i.quantity} × {i.name} ·{' '}
+                            {(i.size || 'medium').charAt(0).toUpperCase() +
+                              (i.size || 'medium').slice(1)}
                           </span>
                           <b>{money(i.price_cents * i.quantity)}</b>
                         </div>
@@ -2129,6 +2240,22 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                     )
                   }
                 />
+                <select
+                  aria-label={`Size for ${p?.name || old?.name}`}
+                  value={item.size}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setEditItems((items) =>
+                      items.map((i, n) =>
+                        n === index ? { ...i, size: e.target.value as ProductSize } : i,
+                      ),
+                    )
+                  }
+                >
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
               </div>
             );
           })}
@@ -2139,7 +2266,11 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
               disabled={busy}
               onChange={(e) => {
                 const id = Number(e.target.value);
-                if (id) setEditItems((items) => [...items, { product_id: id, quantity: 1 }]);
+                if (id)
+                  setEditItems((items) => [
+                    ...items,
+                    { product_id: id, quantity: 1, size: 'medium' },
+                  ]);
               }}
             >
               <option value="">Choose a product</option>

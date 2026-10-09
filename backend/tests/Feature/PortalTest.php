@@ -92,6 +92,44 @@ class PortalTest extends TestCase
     $this->patchJson('/api/orders/' . $id, ['status' => 'completed'])->assertUnprocessable();
     $this->assertDatabaseCount('sales', 1);
   }
+  public function test_customer_can_choose_an_order_item_size_and_it_reaches_the_receipt(): void
+  {
+    $p = $this->product();
+    DB::table('products')
+      ->where('id', $p)
+      ->update([
+        'small_price_cents' => 300,
+        'medium_price_cents' => 450,
+        'large_price_cents' => 700,
+      ]);
+    $this->actingAs($this->user());
+    $id = $this->postJson('/api/orders', [
+      'service_type' => 'dine_in',
+      'items' => [['product_id' => $p, 'quantity' => 1, 'size' => 'large']],
+    ])
+      ->assertCreated()
+      ->assertJsonPath('items.0.size', 'large')
+      ->assertJsonPath('items.0.price_cents', 700)
+      ->assertJsonPath('total_cents', 700)
+      ->json('id');
+    $this->postJson('/api/orders', [
+      'items' => [['product_id' => $p, 'quantity' => 1, 'size' => 'extra_large']],
+    ])->assertUnprocessable();
+    $this->actingAs($this->user('admin'));
+    foreach (['confirmed', 'ready', 'completed'] as $status) {
+      $this->patchJson('/api/orders/' . $id, ['status' => $status])->assertOk();
+    }
+    $this->assertDatabaseHas('order_items', [
+      'order_id' => $id,
+      'product_id' => $p,
+      'size' => 'large',
+    ]);
+    $this->assertDatabaseHas('sale_items', [
+      'product_id' => $p,
+      'size' => 'large',
+      'price_cents' => 700,
+    ]);
+  }
   public function test_archived_products_cannot_be_ordered(): void
   {
     $p = $this->product();

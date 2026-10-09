@@ -59,7 +59,8 @@ class OrderEmails
       $body .= "\nYour order has arrived. The store will record payment and provide your receipt.";
     }
     foreach ($order->items as $item) {
-      $body .= "\n" . $item->quantity . ' × ' . $item->name;
+      $body .=
+        "\n" . $item->quantity . ' × ' . $item->name . ' · ' . ucfirst($item->size ?? 'medium');
     }
     if ($order->delivery_status) {
       $body .= "\nDelivery: " . str_replace('_', ' ', $order->delivery_status);

@@ -2325,6 +2325,21 @@ th {
 .products-panel .product-table-actions {
   white-space: nowrap;
 }
+.product-size-prices {
+  display: grid;
+  gap: 3px;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.size-price-help {
+  align-self: end;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--column-bg);
+  font-size: 11px;
+  line-height: 1.5;
+}
 .products-panel .product-table-actions button {
   font-size: 10px;
   border-radius: 5px;
@@ -2957,6 +2972,39 @@ th {
 .pos-app .cart-item-info small {
   color: #7e91a3;
 }
+.pos-app .pos-size-picker {
+  margin: 7px 0 0;
+  padding: 0;
+  border: 0;
+}
+.pos-app .pos-size-picker legend {
+  margin-bottom: 4px;
+  color: #7e91a3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.pos-app .pos-size-picker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pos-app .pos-size-picker button {
+  min-height: 27px;
+  padding: 4px 7px;
+  border: 1px solid #dce6ef;
+  border-radius: 6px;
+  background: #eef3f8;
+  color: #57728b;
+  font-size: 9px;
+  font-weight: 800;
+}
+.pos-app .pos-size-picker button.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
 .pos-app .stepper {
   gap: 7px;
 }
@@ -3371,6 +3419,10 @@ th {
   padding: 8px;
   border: 1px solid #e7d3be;
   border-radius: 5px;
+}
+.order-edit-dialog .order-edit-line select {
+  width: 105px;
+  flex: 0 0 105px;
 }
 .order-edit-dialog select,
 .order-edit-dialog textarea {
