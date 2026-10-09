@@ -6441,7 +6441,7 @@ body {
 /* Shared site footer and information pages */
 .portal-footer.site-footer {
   display: block;
-  margin-top: 36px;
+  margin-top: 0;
   padding: 0;
   border-top: 1px solid var(--box-border);
   background: var(--box-bg);
