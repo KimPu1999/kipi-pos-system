@@ -1205,3 +1205,94 @@ button svg,
   border-color: var(--ds-primary) !important;
   box-shadow: var(--ds-ring);
 }
+
+/* ---- Billing period option list ---- */
+.bill-range-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-alt);
+}
+
+.bill-range-info {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.bill-range-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+}
+
+.bill-range-info strong {
+  font-size: 15px;
+  color: var(--ds-text);
+}
+
+.bill-range-info small {
+  font-size: var(--ds-font-helper);
+  color: var(--ds-text-muted);
+}
+
+.bill-range-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  background: var(--ds-surface);
+}
+
+.bill-range-option {
+  border: 0;
+  background: transparent;
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  font-weight: var(--ds-font-weight);
+  padding: 6px 12px;
+  border-radius: var(--ds-radius-xs);
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.bill-range-option:hover:not(.active) {
+  background: var(--ds-surface-alt);
+  color: var(--ds-text);
+}
+
+.bill-range-option.active {
+  background: var(--ds-primary);
+  color: #ffffff;
+}
+
+.bill-range-step {
+  display: inline-flex;
+  gap: var(--ds-space-2);
+}
+
+@media (max-width: 760px) {
+  .bill-range-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .bill-range-options {
+    justify-content: center;
+  }
+
+  .bill-range-step {
+    justify-content: center;
+  }
+}

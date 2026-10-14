@@ -1352,10 +1352,6 @@ export default function Portal({ user, logout }: { user: User; logout: ReactNode
                       />
                     </label>
                   ))}
-                  <p className="muted size-price-help">
-                    Enter at least one size price. Leave a price blank to hide that size from the
-                    shop.
-                  </p>
                   <label className="image-upload">
                     Product image
                     <input

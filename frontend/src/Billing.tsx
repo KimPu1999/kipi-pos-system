@@ -239,86 +239,78 @@ export default function Billing({
             Paid amount <b>{money(dateBills.reduce((n, b) => n + b.total_cents, 0))}</b>
           </div>
         </div>
-        <div className="order-day-navigation" role="group" aria-label="Choose bill period">
-          <button
-            className="secondary"
-            onClick={() => shiftBillPeriod(-1)}
-            disabled={billRange === 'all' || exporting || loading}
-          >
-            ← Previous {billRange === 'all' ? 'period' : billRange}
-          </button>
-          <div>
-            <span>{billRange === 'all' ? 'Complete history' : `Bills for ${billRange}`}</span>
+        <div className="bill-range-bar" role="group" aria-label="Choose bill period">
+          <div className="bill-range-info">
+            <span className="bill-range-kicker">
+              {billRange === 'all' ? 'Complete history' : `Bills for ${billRange}`}
+            </span>
             <strong>{billPeriodLabel}</strong>
             <small>
               {dateBills.length} {dateBills.length === 1 ? 'bill' : 'bills'}
             </small>
           </div>
-          <button
-            className="secondary"
-            onClick={() => shiftBillPeriod(1)}
-            disabled={billRange === 'all' || inBillPeriod(new Date()) || exporting || loading}
-          >
-            Next {billRange === 'all' ? 'period' : billRange} →
-          </button>
-          <button
-            className={
-              billRange === 'day' && ygnKey(billAnchor) === ygnKey(new Date())
-                ? 'primary'
-                : 'secondary'
-            }
-            onClick={() => {
-              setBillRange('day');
-              setBillAnchor(new Date());
-            }}
-          >
-            Today
-          </button>
-          <button
-            className={
-              billRange === 'week' && weekKey(billAnchor) === weekKey(new Date())
-                ? 'primary'
-                : 'secondary'
-            }
-            onClick={() => {
-              setBillRange('week');
-              setBillAnchor(new Date());
-            }}
-          >
-            This week
-          </button>
-          <button
-            className={
-              billRange === 'month' && monthKey(billAnchor) === monthKey(new Date())
-                ? 'primary'
-                : 'secondary'
-            }
-            onClick={() => {
-              setBillRange('month');
-              setBillAnchor(new Date());
-            }}
-          >
-            This month
-          </button>
-          <button
-            className={
-              billRange === 'year' && yearKey(billAnchor) === yearKey(new Date())
-                ? 'primary'
-                : 'secondary'
-            }
-            onClick={() => {
-              setBillRange('year');
-              setBillAnchor(new Date());
-            }}
-          >
-            This year
-          </button>
-          <button
-            className={billRange === 'all' ? 'primary' : 'secondary'}
-            onClick={() => setBillRange('all')}
-          >
-            All dates
-          </button>
+          <div className="bill-range-options" role="group" aria-label="Bill period options">
+            {(
+              [
+                ['day', 'Today'],
+                ['week', 'This week'],
+                ['month', 'This month'],
+                ['year', 'This year'],
+              ] as const
+            ).map(([range, label]) => {
+              const active =
+                billRange === range &&
+                (range === 'day'
+                  ? ygnKey(billAnchor) === ygnKey(new Date())
+                  : range === 'week'
+                    ? weekKey(billAnchor) === weekKey(new Date())
+                    : range === 'month'
+                      ? monthKey(billAnchor) === monthKey(new Date())
+                      : yearKey(billAnchor) === yearKey(new Date()));
+              return (
+                <button
+                  key={range}
+                  type="button"
+                  className={active ? 'bill-range-option active' : 'bill-range-option'}
+                  aria-pressed={billRange === range}
+                  onClick={() => {
+                    setBillRange(range);
+                    setBillAnchor(new Date());
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className={billRange === 'all' ? 'bill-range-option active' : 'bill-range-option'}
+              aria-pressed={billRange === 'all'}
+              onClick={() => setBillRange('all')}
+            >
+              All dates
+            </button>
+          </div>
+          <div className="bill-range-step">
+            <button
+              type="button"
+              className="secondary btn-sm"
+              onClick={() => shiftBillPeriod(-1)}
+              disabled={billRange === 'all' || exporting || loading}
+              aria-label={`Previous ${billRange === 'all' ? 'period' : billRange}`}
+            >
+              ← Prev
+            </button>
+            <button
+              type="button"
+              className="secondary btn-sm"
+              onClick={() => shiftBillPeriod(1)}
+              disabled={billRange === 'all' || inBillPeriod(new Date()) || exporting || loading}
+              aria-label={`Next ${billRange === 'all' ? 'period' : billRange}`}
+            >
+              Next →
+            </button>
+          </div>
         </div>
         <label>
           Search bills
