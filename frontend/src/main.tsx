@@ -10,6 +10,7 @@ import './styles.css';
 import './customer-dashboard.css';
 import './theme.css';
 import './responsive.css';
+import './design-system.css';
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Auth />

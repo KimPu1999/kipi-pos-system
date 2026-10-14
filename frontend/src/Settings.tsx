@@ -13,9 +13,9 @@ export default function Settings() {
   const [preview, setPreview] = useState(false);
   const defaults: SettingsData = {
     store_name: 'Kipi POS',
-    accent: '#d96700',
-    light_background: '#f5f2ee',
-    light_text: '#29231e',
+    accent: '#2563eb',
+    light_background: '#f8fafc',
+    light_text: '#0f172a',
     dark_background: '#131519',
     dark_text: '#f2f4f8',
     font_family: 'dm_sans',

@@ -1,5 +1,5 @@
 .customer-portal {
-  background: #fffaf6;
+  background: #f8fafc;
 }
 .customer-portal .portal-content {
   max-width: 1400px;
@@ -18,18 +18,18 @@
   font-weight: 600;
 }
 .customer-portal .portal-nav button.active {
-  background: #fff0de;
-  color: #9a4700;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 .customer-dashboard {
-  color: #453224;
+  color: #334155;
 }
 .customer-welcome {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   position: relative;
-  background: linear-gradient(110deg, #fff0dd, #ffe6c4);
-  border: 1px solid #f0d6b6;
+  background: linear-gradient(110deg, #eff6ff, #dbeafe);
+  border: 1px solid #93c5fd;
   border-radius: 20px;
   overflow: hidden;
   padding: 37px 40px;
@@ -39,7 +39,7 @@
 .customer-kicker {
   font-size: 9px;
   letter-spacing: 1.7px;
-  color: #a97542;
+  color: #64748b;
   font-weight: 700;
   display: block;
 }
@@ -48,23 +48,23 @@
   line-height: 1.35;
   letter-spacing: -1.2px;
   margin: 14px 0;
-  color: #59361d;
+  color: #1e3a8a;
 }
 .customer-welcome h2 > span {
-  color: #b95400;
+  color: #1d4ed8;
 }
 .customer-welcome p {
   font-size: 13px;
   line-height: 1.9;
-  color: #88694e;
+  color: #475569;
   margin: 0 0 23px;
 }
 .customer-hero-button {
   display: flex;
   align-items: center;
   gap: 18px;
-  background: #d96700;
-  color: #2e1700;
+  background: #2563eb;
+  color: #0f172a;
   font-size: 13px;
   font-weight: 700;
   padding: 14px 20px;
@@ -81,7 +81,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #977454;
+  color: #64748b;
 }
 .customer-welcome-art {
   position: relative;
@@ -120,7 +120,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-size: 11px;
-  color: #986f47;
+  color: #64748b;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -133,7 +133,7 @@
 .customer-stat {
   padding: 21px 23px;
   background: #fff;
-  border: 1px solid #eddfd1;
+  border: 1px solid #e2e8f0;
   border-radius: 13px;
   text-align: left;
   transition:
@@ -146,10 +146,10 @@
   justify-content: space-between;
   gap: 10px;
   font-size: 12px;
-  color: #826953;
+  color: #475569;
 }
 .customer-stat > div svg {
-  color: #d2803e;
+  color: #2563eb;
 }
 .customer-stat > b {
   display: block;
@@ -157,11 +157,11 @@
     800 31px 'Manrope',
     sans-serif;
   margin: 13px 0 7px;
-  color: #533721;
+  color: #334155;
 }
 .customer-stat > small {
   font-size: 10px;
-  color: #8f7965;
+  color: #64748b;
   line-height: 1.6;
 }
 .stat-blue > div svg {
@@ -181,7 +181,7 @@
 }
 .customer-home-panel,
 .customer-how-panel {
-  border: 1px solid #eddfd1;
+  border: 1px solid #e2e8f0;
   border-radius: 15px;
   padding: 27px;
   background: #fff;
@@ -204,7 +204,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #a65a1b;
+  color: #1d4ed8;
   white-space: nowrap;
 }
 .customer-pickup-title {
@@ -212,8 +212,8 @@
   align-items: center;
   gap: 12px;
   padding: 17px;
-  background: #fffaf3;
-  border: 1px solid #f1e4d5;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 9px;
 }
 .customer-pickup-icon {
@@ -222,8 +222,8 @@
   width: 43px;
   height: 43px;
   border-radius: 9px;
-  background: #ffeed8;
-  color: #bd7437;
+  background: #eff6ff;
+  color: #2563eb;
   flex-shrink: 0;
 }
 .customer-pickup-title > div {
@@ -236,7 +236,7 @@
 .customer-pickup-title small {
   display: block;
   font-size: 10px;
-  color: #9a8069;
+  color: #64748b;
   margin-top: 6px;
 }
 .customer-pickup-steps {
@@ -253,7 +253,7 @@
   right: 16%;
   top: 15px;
   height: 2px;
-  background: #efe5d9;
+  background: #e2e8f0;
 }
 .customer-pickup-steps > div {
   display: flex;
@@ -267,46 +267,46 @@
   height: 31px;
   display: grid;
   place-items: center;
-  background: #f3ede5;
+  background: #f1f5f9;
   border: 4px solid white;
   border-radius: 50%;
-  color: #b1a08f;
+  color: #94a3b8;
   font-size: 10px;
   box-sizing: content-box;
   margin-top: -4px;
 }
 .customer-pickup-steps .reached > span {
-  background: #d96700;
-  color: #2e1700;
+  background: #2563eb;
+  color: #0f172a;
 }
 .customer-pickup-steps b {
   font-size: 11px;
-  color: #a28a72;
+  color: #64748b;
   font-weight: 500;
 }
 .customer-pickup-steps .reached b {
-  color: #955115;
+  color: #1d4ed8;
   font-weight: 700;
 }
 .customer-pickup-message {
   font-size: 12px;
   line-height: 1.8;
-  color: #927253;
+  color: #64748b;
 }
 .customer-pickup-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  border-top: 1px solid #eee0d1;
+  border-top: 1px solid #e2e8f0;
   padding: 17px 0;
   margin-top: 15px;
   font-size: 11px;
-  color: #927253;
+  color: #64748b;
 }
 .customer-pickup-total b {
   font-size: 20px;
-  color: #784218;
+  color: #1d4ed8;
 }
 .customer-outline-button {
   display: flex;
@@ -315,14 +315,14 @@
   gap: 14px;
   width: 100%;
   padding: 12px 15px;
-  border: 1px solid #e7c7a4;
-  background: #fffaf3;
-  color: #a35719;
+  border: 1px solid #93c5fd;
+  background: #f8fafc;
+  color: #1d4ed8;
   border-radius: 7px;
   font-size: 12px;
 }
 .customer-how-panel {
-  background: #fdf7ef;
+  background: #eff6ff;
 }
 .customer-how-panel h2 {
   margin-bottom: 24px;
@@ -337,8 +337,8 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #f8e8d3;
-  color: #b87c43;
+  background: #dbeafe;
+  color: #64748b;
   font-size: 10px;
   display: grid;
   place-items: center;
@@ -350,24 +350,24 @@
 .customer-how-step p {
   font-size: 11px;
   line-height: 1.8;
-  color: #937a63;
+  color: #64748b;
   margin: 5px 0 0;
 }
 .customer-account-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-top: 1px solid #ead7c0;
+  border-top: 1px solid #e2e8f0;
   padding-top: 20px;
   margin-top: 24px;
-  color: #a17c55;
+  color: #64748b;
 }
 .customer-account-link > div {
   flex: 1;
 }
 .customer-account-link b {
   font-size: 12px;
-  color: #795636;
+  color: #475569;
 }
 .customer-account-link small {
   display: block;
@@ -376,23 +376,23 @@
 }
 .customer-account-link button {
   padding: 7px;
-  background: #ffefdc;
+  background: #eff6ff;
   border-radius: 6px;
 }
 .customer-no-pickup {
   text-align: center;
   padding: 33px 15px 10px;
-  color: #c29465;
+  color: #94a3b8;
 }
 .customer-no-pickup h3 {
   font-size: 15px;
-  color: #87623e;
+  color: #475569;
   margin: 16px 0 9px;
 }
 .customer-no-pickup p {
   font-size: 12px;
   line-height: 1.9;
-  color: #987c63;
+  color: #64748b;
   margin-bottom: 23px;
 }
 .customer-menu-heading {
@@ -405,7 +405,7 @@
 }
 .customer-featured-card {
   background: white;
-  border: 1px solid #eddfd1;
+  border: 1px solid #e2e8f0;
   border-radius: 13px;
   text-align: left;
   overflow: hidden;
@@ -437,7 +437,7 @@
   padding: 5px 8px;
   background: #ffffffda;
   border-radius: 5px;
-  color: #8b6643;
+  color: #475569;
 }
 .customer-featured-info {
   padding: 12px 10px;
@@ -445,7 +445,7 @@
 .customer-featured-info h3 {
   font-size: 13px;
   margin: 0 0 13px;
-  color: #604023;
+  color: #334155;
 }
 .customer-featured-info > span {
   display: flex;
@@ -454,20 +454,20 @@
 }
 .customer-featured-info b {
   font-size: 14px;
-  color: #a65717;
+  color: #1d4ed8;
 }
 .customer-featured-arrow {
   padding: 6px;
-  background: #fff0de;
+  background: #eff6ff;
   display: flex;
   border-radius: 6px;
-  color: #af6325;
+  color: #2563eb;
 }
 .customer-menu-empty {
   display: flex;
   gap: 12px;
   align-items: center;
-  color: #a37f58;
+  color: #64748b;
   font-size: 12px;
 }
 .customer-portal .account-panel {
@@ -475,15 +475,15 @@
   padding: 30px;
 }
 .customer-portal .account-panel .avatar {
-  background: #ffe7cd;
-  color: #ab6323;
+  background: #dbeafe;
+  color: #2563eb;
 }
 .customer-portal .account-panel h2 {
   font-size: 21px;
 }
 .customer-portal .account-panel .logout {
   max-width: 200px;
-  background: #fff7ec;
+  background: #eff6ff;
 }
 @media (max-width: 1050px) {
   .customer-home-grid {

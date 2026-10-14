@@ -67,7 +67,7 @@ export default function CustomerSettings() {
     } catch {}
     document.documentElement.style.setProperty(
       '--setting-accent',
-      value === 'default' ? document.documentElement.dataset.defaultAccent || '#d96700' : value,
+      value === 'default' ? document.documentElement.dataset.defaultAccent || '#2563eb' : value,
     );
     document.documentElement.dataset.customSettings = 'true';
     setNotice('Your customer color preference is saved for this browser.');

@@ -107,7 +107,7 @@ export default function AdminCustomers({
         body: JSON.stringify({
           status: d.get('status'),
           customer_number: d.get('customer_number') || null,
-          store_notes: d.get('store_notes') || null,
+          store_notes: editing.store_notes,
         }),
       });
       setRecords((old) => old.map((c) => (c.id === updated.id ? updated : c)));
@@ -224,10 +224,6 @@ export default function AdminCustomers({
           <label>
             Customer number
             <input name="customer_number" maxLength={100} />
-          </label>
-          <label>
-            Store notes
-            <textarea name="store_notes" maxLength={2000} />
           </label>
           <button className="primary">{busy ? 'Creating…' : 'Create customer'}</button>
         </fieldset>
@@ -346,14 +342,6 @@ export default function AdminCustomers({
                 name="customer_number"
                 maxLength={100}
                 defaultValue={editing.customer_number || ''}
-              />
-            </label>
-            <label>
-              Store notes
-              <textarea
-                name="store_notes"
-                maxLength={2000}
-                defaultValue={editing.store_notes || ''}
               />
             </label>
             <div>

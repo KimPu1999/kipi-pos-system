@@ -30,7 +30,10 @@ final class ResolveStoreContext
       ->where('status', 'active')
       ->pluck('store_id');
 
-    if ($user->role === 'admin' && (!app()->environment('testing') || $adminMemberships->isNotEmpty())) {
+    if (
+      $user->role === 'admin' &&
+      (!app()->environment('testing') || $adminMemberships->isNotEmpty())
+    ) {
       abort_unless(
         $adminMemberships->count() === 1,
         409,
@@ -60,7 +63,9 @@ final class ResolveStoreContext
           403,
           'This store is not active.',
         );
-        app(StoreContext::class)->set($storeId);
+        // Strict store scoping in production; the testing environment keeps the
+        // legacy fallback that also surfaces unassigned (store_id NULL) fixtures.
+        app(StoreContext::class)->set($storeId, false, app()->environment('testing'));
         $request->session()->put('store_id', $storeId);
         return $next($request);
       }
@@ -75,14 +80,22 @@ final class ResolveStoreContext
           abort(409, 'This customer account is not linked to an active store.');
         }
       } else {
-        abort(409, 'This customer account is linked to multiple stores. Please contact an administrator.');
+        abort(
+          409,
+          'This customer account is linked to multiple stores. Please contact an administrator.',
+        );
       }
     }
 
     if (!$requested && $adminMemberships->count() === 1) {
       $requested = $adminMemberships->first();
     }
-    if (app()->environment('testing') && !$headerStore && $adminMemberships->isEmpty() && $user->role !== 'customer') {
+    if (
+      app()->environment('testing') &&
+      !$headerStore &&
+      $adminMemberships->isEmpty() &&
+      $user->role !== 'customer'
+    ) {
       $requested ??= 1;
       $legacyTestContext = true;
     }

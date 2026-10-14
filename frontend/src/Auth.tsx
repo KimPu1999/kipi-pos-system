@@ -5,6 +5,7 @@ import { ShoppingBag, LogOut } from './icons';
 import Portal from './Portal';
 import { api, ApiError, type User } from './api';
 import PlatformAdmin from './PlatformAdmin';
+import { Button, FormField, Input } from './components/ui';
 export default function Auth() {
   const [user, setUser] = useState<User | null>(null);
   const [stores, setStores] = useState<Store[] | null>(null);
@@ -212,25 +213,29 @@ export default function Auth() {
           </div>
         )}
         <form onSubmit={submit}>
-          <label>
-            Email address
-            <input name="email" type="email" autoComplete="email" required maxLength={254} />
-            {fields.email && <small>{fields.email[0]}</small>}
-          </label>
-          <label>
-            Password
-            <input
+          <FormField label="Email address" htmlFor="login-email" error={fields.email?.[0]}>
+            <Input
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              maxLength={254}
+            />
+          </FormField>
+          <FormField label="Password" htmlFor="login-password" error={fields.password?.[0]}>
+            <Input
+              id="login-password"
               name="password"
               type="password"
               autoComplete="current-password"
               required
               maxLength={128}
             />
-            {fields.password && <small>{fields.password[0]}</small>}
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? 'Please wait…' : 'Log in'}
-          </button>
+          </FormField>
+          <Button type="submit" variant="primary" loading={busy} className="auth-submit">
+            Log in
+          </Button>
         </form>
         <p className="muted">
           Need an account? Please contact your store administrator to create one.

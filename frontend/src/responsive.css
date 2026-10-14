@@ -508,7 +508,7 @@
     font-size: 42px !important;
     line-height: 1 !important;
     letter-spacing: 1px !important;
-    color: #26211f !important;
+    color: #0f172a !important;
   }
   .portal .portal-top .header-contact {
     position: static !important;
@@ -532,7 +532,7 @@
   .portal .portal-top .header-contact strong {
     max-width: none !important;
     font-size: 18px !important;
-    color: #695d57 !important;
+    color: #475569 !important;
     white-space: nowrap !important;
     overflow: visible !important;
   }
@@ -565,7 +565,7 @@
   }
   .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
     font-size: 29px !important;
-    color: #26211f !important;
+    color: #0f172a !important;
   }
   .portal .portal-top .header-contact {
     grid-column: 2 !important;
@@ -579,7 +579,7 @@
   }
   .portal .portal-top .header-contact strong {
     font-size: 12px !important;
-    color: #695d57 !important;
+    color: #475569 !important;
   }
   .portal .portal-top .portal-user {
     grid-column: 3 !important;
@@ -601,7 +601,7 @@
   }
   .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
     font-size: 20px !important;
-    color: #26211f !important;
+    color: #0f172a !important;
   }
 }
 [data-theme='dark'] .portal .portal-top .sidebar-logo-toggle .kipi-pos-text {
