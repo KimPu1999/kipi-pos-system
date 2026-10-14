@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { api } from './api';
 import { Search, Trash2, Users } from './icons';
 import CustomerRewards from './CustomerRewards';
@@ -43,7 +43,21 @@ export default function AdminCustomers({
     [editing, setEditing] = useState<Customer | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState(''),
+    [revealPassword, setRevealPassword] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null),
+    confirmRef = useRef<HTMLInputElement>(null);
+  function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    const bytes = new Uint32Array(16);
+    crypto.getRandomValues(bytes);
+    const password = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+    if (passwordRef.current) passwordRef.current.value = password;
+    if (confirmRef.current) confirmRef.current.value = password;
+    setRevealPassword(true);
+    setError('');
+    setNotice('Temporary password generated. Copy it and share it with the customer securely.');
+  }
   const visible = useMemo(
     () =>
       records.filter((c) =>
@@ -118,7 +132,10 @@ export default function AdminCustomers({
       });
       setRecords((old) => [customer, ...old]);
       form.reset();
-      setNotice('Customer created for this store.');
+      setRevealPassword(false);
+      setNotice(
+        'Customer created for this store. Share the temporary password with them; they must sign in themselves.',
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to create customer.');
     } finally {
@@ -177,18 +194,33 @@ export default function AdminCustomers({
           </label>
           <label>
             Temporary password
-            <input name="password" type="password" required minLength={8} maxLength={128} />
+            <input
+              ref={passwordRef}
+              name="password"
+              type={revealPassword ? 'text' : 'password'}
+              required
+              minLength={8}
+              maxLength={128}
+              autoComplete="new-password"
+            />
           </label>
           <label>
             Confirm password
             <input
+              ref={confirmRef}
               name="password_confirmation"
-              type="password"
+              type={revealPassword ? 'text' : 'password'}
               required
               minLength={8}
               maxLength={128}
+              autoComplete="new-password"
             />
           </label>
+          <div>
+            <button type="button" className="secondary" onClick={generatePassword} disabled={busy}>
+              Generate temporary password
+            </button>
+          </div>
           <label>
             Customer number
             <input name="customer_number" maxLength={100} />

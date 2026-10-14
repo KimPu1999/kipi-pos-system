@@ -24,19 +24,19 @@ final class ResolveStoreContext
     $headerStore = $request->header('X-Store-ID');
     $requested = $headerStore ?: $request->session()->get('store_id');
     $legacyTestContext = false;
-    $memberships = DB::table('store_memberships')
+    $adminMemberships = DB::table('store_memberships')
       ->where('user_id', $user->id)
       ->where('role', 'admin')
       ->where('status', 'active')
       ->pluck('store_id');
 
-    if ($user->role === 'admin' && (!app()->environment('testing') || $memberships->isNotEmpty())) {
+    if ($user->role === 'admin' && (!app()->environment('testing') || $adminMemberships->isNotEmpty())) {
       abort_unless(
-        $memberships->count() === 1,
+        $adminMemberships->count() === 1,
         409,
         'Store administrator must have exactly one active store membership.',
       );
-      $storeId = (int) $memberships->first();
+      $storeId = (int) $adminMemberships->first();
       abort_if($headerStore && (int) $headerStore !== $storeId, 403);
       abort_unless(
         DB::table('stores')->where('id', $storeId)->where('status', 'active')->exists(),
@@ -48,10 +48,41 @@ final class ResolveStoreContext
       return $next($request);
     }
 
-    if (!$requested && $memberships->count() === 1) {
-      $requested = $memberships->first();
+    if ($user->role === 'customer') {
+      $customerStores = DB::table('store_customers')
+        ->where('user_id', $user->id)
+        ->where('status', 'active')
+        ->pluck('store_id');
+      if ($customerStores->count() === 1) {
+        $storeId = (int) $customerStores->first();
+        abort_unless(
+          DB::table('stores')->where('id', $storeId)->where('status', 'active')->exists(),
+          403,
+          'This store is not active.',
+        );
+        app(StoreContext::class)->set($storeId);
+        $request->session()->put('store_id', $storeId);
+        return $next($request);
+      }
+      if ($customerStores->isEmpty()) {
+        if (app()->environment('testing')) {
+          $requested ??= 1;
+          $legacyTestContext = true;
+          app(StoreContext::class)->set((int) $requested, false, true);
+          $request->session()->put('store_id', (int) $requested);
+          return $next($request);
+        } else {
+          abort(409, 'This customer account is not linked to an active store.');
+        }
+      } else {
+        abort(409, 'This customer account is linked to multiple stores. Please contact an administrator.');
+      }
     }
-    if (app()->environment('testing') && !$headerStore && $memberships->isEmpty()) {
+
+    if (!$requested && $adminMemberships->count() === 1) {
+      $requested = $adminMemberships->first();
+    }
+    if (app()->environment('testing') && !$headerStore && $adminMemberships->isEmpty() && $user->role !== 'customer') {
       $requested ??= 1;
       $legacyTestContext = true;
     }
@@ -63,7 +94,7 @@ final class ResolveStoreContext
       404,
     );
 
-    $member = $memberships->contains($storeId);
+    $member = $adminMemberships->contains($storeId);
     $permission = $request->isMethodSafe() ? 'platform.data.read_all' : 'platform.data.write_all';
     $platform = PlatformPermissions::has($user->id, $permission);
 

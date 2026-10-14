@@ -55,6 +55,8 @@ final class AdminCustomerController
         'email' => $data['email'],
         'password' => $data['password'],
       ]);
+      $user->role = 'customer';
+      $user->save();
       DB::table('store_customers')->insert([
         'store_id' => app(StoreContext::class)->id(),
         'user_id' => $user->id,

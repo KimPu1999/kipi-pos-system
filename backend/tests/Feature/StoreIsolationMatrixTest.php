@@ -56,6 +56,36 @@ class StoreIsolationMatrixTest extends TestCase
     ];
   }
 
+  public function test_store_listing_denies_admin_without_exactly_one_membership(): void
+  {
+    $none = User::create([
+      'name' => 'No store admin',
+      'email' => 'no-store@example.test',
+      'password' => 'password-123',
+    ]);
+    $none->role = 'admin';
+    $none->save();
+    $this->actingAs($none)->getJson('/api/stores')->assertStatus(409);
+
+    $multiple = $this->admin(1, 'multi-store@example.test');
+    DB::table('store_memberships')->insert([
+      'store_id' => 2,
+      'user_id' => $multiple->id,
+      'role' => 'admin',
+      'status' => 'active',
+      'created_at' => now(),
+      'updated_at' => now(),
+    ]);
+    $this->actingAs($multiple)->getJson('/api/stores')->assertStatus(409);
+
+    $single = $this->admin(2, 'single-store@example.test');
+    $this->actingAs($single)
+      ->getJson('/api/stores')
+      ->assertOk()
+      ->assertJsonCount(1)
+      ->assertJsonPath('0.id', 2);
+  }
+
   public function test_store_admin_with_multiple_active_memberships_fails_closed(): void
   {
     $admin = $this->admin(1, 'multi@example.test');
@@ -400,5 +430,113 @@ class StoreIsolationMatrixTest extends TestCase
       ])
       ->assertUnprocessable()
       ->assertJsonValidationErrors('email');
+  }
+
+  public function test_customer_management_is_isolated_per_store(): void
+  {
+    $adminA = $this->admin(1, 'customers-a@example.test');
+    $adminB = $this->admin(2, 'customers-b@example.test');
+
+    $customerA = $this->actingAs($adminA)
+      ->postJson('/api/admin/customers', [
+        'name' => 'Alpha',
+        'email' => 'alpha@example.test',
+        'password' => 'password-123',
+        'password_confirmation' => 'password-123',
+        'customer_number' => 'A-1',
+      ])
+      ->assertCreated()
+      ->json('id');
+    $customerB = $this->actingAs($adminB)
+      ->postJson('/api/admin/customers', [
+        'name' => 'Bravo',
+        'email' => 'bravo@example.test',
+        'password' => 'password-123',
+        'password_confirmation' => 'password-123',
+        'customer_number' => 'B-1',
+      ])
+      ->assertCreated()
+      ->json('id');
+
+    $this->actingAs($adminA)
+      ->getJson('/api/admin/customers')
+      ->assertOk()
+      ->assertJsonCount(1)
+      ->assertJsonPath('0.id', $customerA);
+    $this->actingAs($adminB)
+      ->getJson('/api/admin/customers')
+      ->assertOk()
+      ->assertJsonCount(1)
+      ->assertJsonPath('0.id', $customerB);
+
+    // Guessing another store's customer id must not expose or mutate it.
+    $this->actingAs($adminA)
+      ->getJson('/api/admin/customers/' . $customerB)
+      ->assertNotFound();
+    $this->actingAs($adminA)
+      ->putJson('/api/admin/customers/' . $customerB, [
+        'status' => 'inactive',
+        'customer_number' => 'HIJACK',
+      ])
+      ->assertNotFound();
+    $this->actingAs($adminA)
+      ->deleteJson('/api/admin/customers/' . $customerB)
+      ->assertNotFound();
+    $this->assertDatabaseHas('store_customers', [
+      'store_id' => 2,
+      'user_id' => $customerB,
+      'status' => 'active',
+      'customer_number' => 'B-1',
+    ]);
+
+    // Dashboard counts never leak the other store's customers.
+    $this->actingAs($adminA)
+      ->getJson('/api/admin/dashboard')
+      ->assertOk()
+      ->assertJsonPath('customers', 1);
+    $this->actingAs($adminB)
+      ->getJson('/api/admin/dashboard')
+      ->assertOk()
+      ->assertJsonPath('customers', 1);
+  }
+
+  public function test_removing_a_customer_preserves_global_user_and_other_store_link(): void
+  {
+    $adminA = $this->admin(1, 'remove-a@example.test');
+    $customer = $this->customer('linked@example.test');
+    $customer->name = 'Linked customer';
+    $customer->save();
+    DB::table('store_customers')->insert([
+      [
+        'store_id' => 1,
+        'user_id' => $customer->id,
+        'status' => 'active',
+        'created_at' => now(),
+        'updated_at' => now(),
+      ],
+      [
+        'store_id' => 2,
+        'user_id' => $customer->id,
+        'status' => 'active',
+        'created_at' => now(),
+        'updated_at' => now(),
+      ],
+    ]);
+
+    $this->actingAs($adminA)
+      ->deleteJson('/api/admin/customers/' . $customer->id)
+      ->assertOk();
+
+    $this->assertDatabaseHas('users', ['id' => $customer->id, 'email' => 'linked@example.test']);
+    $this->assertDatabaseHas('store_customers', [
+      'store_id' => 1,
+      'user_id' => $customer->id,
+      'status' => 'inactive',
+    ]);
+    $this->assertDatabaseHas('store_customers', [
+      'store_id' => 2,
+      'user_id' => $customer->id,
+      'status' => 'active',
+    ]);
   }
 }

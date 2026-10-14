@@ -2,7 +2,6 @@
 namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 class AuthTest extends TestCase
 {
@@ -13,7 +12,7 @@ class AuthTest extends TestCase
       $this->getJson($url)->assertUnauthorized();
     }
   }
-  public function test_registration_hashes_password_and_signs_in(): void
+  public function test_public_registration_is_disabled(): void
   {
     $this->postJson('/api/auth/register', [
       'name' => 'Alex',
@@ -21,26 +20,10 @@ class AuthTest extends TestCase
       'password' => 'password-123',
       'password_confirmation' => 'password-123',
     ])
-      ->assertCreated()
-      ->assertJsonMissingPath('password');
-    $this->assertAuthenticated();
-    $this->assertTrue(Hash::check('password-123', User::first()->password));
-    $this->getJson('/api/auth/user')->assertOk()->assertJsonPath('name', 'Alex');
-    $this->getJson('/api/catalog')->assertOk();
-    $this->getJson('/api/products')->assertForbidden();
-  }
-  public function test_registration_validation(): void
-  {
-    User::create(['name' => 'Alex', 'email' => 'alex@example.com', 'password' => 'password-123']);
-    $this->postJson('/api/auth/register', [
-      'name' => 'Alex',
-      'email' => 'alex@example.com',
-      'password' => 'short',
-      'password_confirmation' => 'other',
-    ])
-      ->assertUnprocessable()
-      ->assertJsonValidationErrors(['email', 'password']);
-    $this->assertDatabaseCount('users', 1);
+      ->assertForbidden()
+      ->assertJsonPath('message', 'Please contact your store administrator to create an account.');
+    $this->assertGuest();
+    $this->assertDatabaseCount('users', 0);
   }
   public function test_login_and_logout(): void
   {
@@ -61,6 +44,7 @@ class AuthTest extends TestCase
   }
   public function test_real_csrf_protection(): void
   {
+    User::create(['name' => 'Alex', 'email' => 'alex@example.com', 'password' => 'password-123']);
     $this->app['env'] = 'local';
     $this->postJson('/api/auth/login', [
       'email' => 'alex@example.com',
@@ -68,12 +52,10 @@ class AuthTest extends TestCase
     ])->assertStatus(419);
     $token = $this->getJson('/api/auth/csrf')->assertOk()->json('token');
     $this->withHeader('X-CSRF-TOKEN', $token)
-      ->postJson('/api/auth/register', [
-        'name' => 'Alex',
+      ->postJson('/api/auth/login', [
         'email' => 'alex@example.com',
         'password' => 'password-123',
-        'password_confirmation' => 'password-123',
       ])
-      ->assertCreated();
+      ->assertOk();
   }
 }

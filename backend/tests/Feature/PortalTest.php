@@ -32,15 +32,8 @@ class PortalTest extends TestCase
   }
   public function test_customer_cannot_manage_store_or_escalate_role(): void
   {
-    $this->postJson('/api/auth/register', [
-      'name' => 'Alex',
-      'email' => 'alex@example.com',
-      'password' => 'password-123',
-      'password_confirmation' => 'password-123',
-      'role' => 'admin',
-    ])
-      ->assertCreated()
-      ->assertJsonPath('role', 'customer');
+    $customer = $this->user();
+    $this->actingAs($customer);
     foreach (['/api/admin/dashboard', '/api/products', '/api/sales'] as $url) {
       $this->getJson($url)->assertForbidden();
     }
