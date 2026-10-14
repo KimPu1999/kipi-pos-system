@@ -1,7 +1,8 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
+use App\Support\StoreContext;
 class CustomerRewardsController
 {
   public function index(Request $r)
@@ -9,8 +10,16 @@ class CustomerRewardsController
     $id = $r->user()->id;
     if ($r->filled('customer_id')) {
       abort_unless($r->user()->role === 'admin', 403);
-      $r->validate(['customer_id' => 'integer|exists:users,id']);
+      $r->validate(['customer_id' => 'integer']);
       $id = (int) $r->input('customer_id');
+      abort_unless(
+        DB::table('store_customers')
+          ->where('store_id', app(StoreContext::class)->id())
+          ->where('user_id', $id)
+          ->where('status', 'active')
+          ->exists(),
+        404,
+      );
     }
     $ledger = DB::table('customer_points')->where('user_id', $id)->get();
     $history = DB::table('sales')

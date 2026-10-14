@@ -55,16 +55,12 @@ class BillsTest extends TestCase
       ->assertOk()
       ->assertJsonCount(1)
       ->assertJsonPath('0.id', $tuesday);
-    $this->getJson('/api/sales?range=week&date=2026-10-06')
-      ->assertOk()
-      ->assertJsonCount(2);
+    $this->getJson('/api/sales?range=week&date=2026-10-06')->assertOk()->assertJsonCount(2);
     $this->getJson('/api/sales?range=month&date=2026-10-06')->assertOk()->assertJsonCount(2);
     $this->getJson('/api/sales?range=year&date=2026-10-06')->assertOk()->assertJsonCount(2);
     $this->getJson('/api/sales?range=all')->assertOk()->assertJsonCount(2);
     $this->getJson('/api/sales?range=day')->assertUnprocessable();
-    $this->getJson('/api/sales?range=week&date=2026-10-01')
-      ->assertOk()
-      ->assertJsonCount(0);
+    $this->getJson('/api/sales?range=week&date=2026-10-01')->assertOk()->assertJsonCount(0);
   }
   public function test_bills_export_to_excel_and_pdf(): void
   {

@@ -13,6 +13,7 @@ class GoogleSheetsSyncTest extends TestCase
     config([
       'google_sheets.enabled' => true,
       'google_sheets.spreadsheet_id' => 'test-sheet',
+      'google_sheets.store_id' => 1,
       'cache.default' => 'array',
     ]);
     $key = openssl_pkey_new([
@@ -71,6 +72,7 @@ class GoogleSheetsSyncTest extends TestCase
       'emoji' => '',
       'created_at' => now(),
       'updated_at' => now(),
+      'store_id' => 1,
     ]);
     try {
       $this->assertSame(1, app(GoogleSheetsSync::class)->run());

@@ -2,7 +2,7 @@
 namespace App\Http\Controllers;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Services\EmployeeShiftPdfExport;
@@ -65,6 +65,7 @@ class EmployeeController
     $end = $start->addMonth();
     $shifts = DB::table('employee_shifts')
       ->join('employees', 'employees.id', '=', 'employee_shifts.employee_id')
+      ->where('employees.store_id', app(\App\Support\StoreContext::class)->id())
       ->where('employee_shifts.starts_at', '>=', $start->utc())
       ->where('employee_shifts.starts_at', '<', $end->utc())
       ->orderBy('employee_shifts.starts_at')
@@ -147,7 +148,10 @@ class EmployeeController
         ]);
       }
       if (DB::table('employee_salary_payments')->where('employee_id', $id)->exists()) {
-        abort(409, 'This employee has salary payments with linked cash-out entries and cannot be deleted.');
+        abort(
+          409,
+          'This employee has salary payments with linked cash-out entries and cannot be deleted.',
+        );
       }
       DB::table('employee_shifts')->where('employee_id', $id)->delete();
       DB::table('employees')->where('id', $id)->delete();
@@ -157,7 +161,14 @@ class EmployeeController
   private function save(Request $r, ?int $id = null)
   {
     $data = $r->validate([
-      'employee_code' => ['required', 'string', 'max:50', Rule::unique('employees')->ignore($id)],
+      'employee_code' => [
+        'required',
+        'string',
+        'max:50',
+        Rule::unique('employees')
+          ->where('store_id', app(\App\Support\StoreContext::class)->id())
+          ->ignore($id),
+      ],
       'name' => 'required|string|max:150',
       'salary_cents' => 'required|integer|min:0|max:1000000000',
       'active' => 'required|boolean',

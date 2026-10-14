@@ -11,9 +11,14 @@ class OrderEmails
     }
     // Customer updates go to the account owner, never an unverified checkout address.
     $email = DB::table('users')->where('id', $order->user_id)->value('email');
-    $admins = config('mail.store_address')
-      ? [config('mail.store_address')]
-      : DB::table('users')->where('role', 'admin')->pluck('email')->all();
+    $admins = DB::table('users')
+      ->join('store_memberships', 'store_memberships.user_id', '=', 'users.id')
+      ->where('store_memberships.store_id', $order->store_id)
+      ->where('store_memberships.role', 'admin')
+      ->where('store_memberships.status', 'active')
+      ->where('users.role', 'admin')
+      ->pluck('users.email')
+      ->all();
     $recipients = [$email, ...$admins];
     $subject = 'Kipi POS · Order #' . $order->id . ' — ' . $event;
     $body =
@@ -87,6 +92,7 @@ class OrderEmails
             "\n\nThank you for ordering with Kipi POS!"
           : $body;
       DB::table('order_emails')->insert([
+        'store_id' => $order->store_id,
         'order_id' => $order->id,
         'recipient' => $recipient,
         'subject' => $recipientSubject,

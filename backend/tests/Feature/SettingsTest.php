@@ -8,13 +8,14 @@ class SettingsTest extends TestCase
   use RefreshDatabase;
   public function test_settings_are_validated_and_admin_only(): void
   {
-    $settings = $this->getJson('/api/settings')->assertOk()->json();
+    $this->getJson('/api/settings')->assertUnauthorized();
     $user = User::create([
       'name' => 'Customer',
       'email' => 'settings@example.com',
       'password' => 'password-123',
     ]);
     $this->actingAs($user);
+    $settings = $this->getJson('/api/settings')->assertOk()->json();
     $this->putJson('/api/settings', $settings)->assertForbidden();
     $this->getJson('/api/settings/system')->assertForbidden();
     $user->role = 'admin';

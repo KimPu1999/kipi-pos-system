@@ -2,10 +2,12 @@
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 use Illuminate\Validation\ValidationException;
 use App\Services\BillPdfExport;
 use App\Services\ExcelExport;
+use App\Support\StoreContext;
+use Illuminate\Validation\Rule;
 class PosController
 {
   public function products()
@@ -16,7 +18,19 @@ class PosController
   {
     $data = $r->validate([
       'name' => 'required|string|max:100',
-      'sku' => 'nullable|string|max:100|unique:products,sku',
+      'sku' => [
+        'nullable',
+        'string',
+        'max:100',
+        Rule::unique('products', 'sku')->where(function ($query) {
+          $context = app(StoreContext::class);
+          return $context->includesUnassigned()
+            ? $query->where(
+              fn($q) => $q->where('store_id', $context->id())->orWhereNull('store_id'),
+            )
+            : $query->where('store_id', $context->id());
+        }),
+      ],
       'category' => 'required|string|max:60',
       'price_cents' => 'nullable|integer|min:0|max:100000000',
       'small_price_cents' => 'nullable|integer|min:0|max:100000000',
@@ -96,7 +110,8 @@ class PosController
   {
     $d = $r->validate([
       'range' => 'sometimes|in:day,week,month,year,all',
-      'date' => 'required_if:range,day|required_if:range,week|required_if:range,month|required_if:range,year|date_format:Y-m-d',
+      'date' =>
+        'required_if:range,day|required_if:range,week|required_if:range,month|required_if:range,year|date_format:Y-m-d',
     ]);
     $range = $d['range'] ?? 'all';
     if ($range === 'all') {
@@ -117,10 +132,7 @@ class PosController
     };
     $label = match ($range) {
       'day' => $d['date'],
-      'week' =>
-        $anchor->format('Y-m-d') .
-        '--' .
-        $anchor->copy()->addDays(6)->format('Y-m-d'),
+      'week' => $anchor->format('Y-m-d') . '--' . $anchor->copy()->addDays(6)->format('Y-m-d'),
       'month' => $anchor->format('Y-m'),
       'year' => $anchor->format('Y'),
     };
@@ -138,7 +150,9 @@ class PosController
   private function paymentLabel(object $sale): string
   {
     return $sale->payment_method === 'bank_transfer'
-      ? ($sale->transfer_provider === 'ayapay' ? 'AYA Pay' : 'KBZPay')
+      ? ($sale->transfer_provider === 'ayapay'
+        ? 'AYA Pay'
+        : 'KBZPay')
       : ucfirst((string) $sale->payment_method);
   }
   private function serviceLabel(string $service): string
@@ -163,7 +177,9 @@ class PosController
   }
   public function exportExcel(Request $r)
   {
-    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange($r);
+    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange(
+      $r,
+    );
     $q = DB::table('sales');
     if ($from) {
       $q->where('created_at', '>=', $from);
@@ -187,27 +203,27 @@ class PosController
         $this->currency((int) $sale->tax_cents),
         $this->currency((int) $sale->total_cents),
         $sale->payment_method === 'bank_transfer'
-          ? $sale->transfer_provider === 'ayapay'
+          ? ($sale->transfer_provider === 'ayapay'
             ? 'AYA Pay'
-            : 'KBZPay'
+            : 'KBZPay')
           : ucfirst((string) $sale->payment_method),
         $sale->amount_received_cents === null
           ? ''
           : $this->currency((int) $sale->amount_received_cents),
         $this->currency((int) $sale->change_cents),
-        Carbon::parse($sale->created_at, 'UTC')
-          ->setTimezone('Asia/Yangon')
-          ->format('Y-m-d H:i:s'),
+        Carbon::parse($sale->created_at, 'UTC')->setTimezone('Asia/Yangon')->format('Y-m-d H:i:s'),
       ];
     };
     $itemSheet = function ($sale) {
-      return collect($sale->items)->map(fn($i) => [
-        (string) $sale->id,
-        (string) $i->product_id,
-        $i->name,
-        (string) $i->quantity,
-        $this->currency((int) $i->price_cents),
-      ]);
+      return collect($sale->items)->map(
+        fn($i) => [
+          (string) $sale->id,
+          (string) $i->product_id,
+          $i->name,
+          (string) $i->quantity,
+          $this->currency((int) $i->price_cents),
+        ],
+      );
     };
     $sheets = [
       'Summary' => [
@@ -256,7 +272,9 @@ class PosController
   }
   public function exportPdf(Request $r)
   {
-    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange($r);
+    ['range' => $range, 'from' => $from, 'until' => $until, 'label' => $label] = $this->saleRange(
+      $r,
+    );
     $q = DB::table('sales');
     if ($from) {
       $q->where('created_at', '>=', $from);
@@ -323,6 +341,18 @@ class PosController
       $service = $data['service_type'] ?? 'takeaway';
       $table = null;
       $customerId = $data['customer_id'] ?? null;
+      if ($customerId && !app(StoreContext::class)->includesUnassigned()) {
+        $authorizedCustomer = DB::table('store_customers')
+          ->where('store_id', app(StoreContext::class)->id())
+          ->where('user_id', $customerId)
+          ->where('status', 'active')
+          ->exists();
+        if (!$authorizedCustomer) {
+          throw ValidationException::withMessages([
+            'customer_id' => 'Choose a customer associated with this store.',
+          ]);
+        }
+      }
       if (
         $customerId &&
         !DB::table('users')->where('id', $customerId)->where('role', 'customer')->exists()
@@ -388,10 +418,7 @@ class PosController
           'discount_cents' => 'Discount cannot exceed the subtotal.',
         ]);
       }
-      $taxSettings = json_decode(
-        DB::table('system_settings')->where('id', 1)->value('settings') ?? '{}',
-        true,
-      );
+      $taxSettings = json_decode(DB::table('system_settings')->value('settings') ?? '{}', true);
       $taxPercent = max(0, min(100, (float) ($taxSettings['tax_percent'] ?? 0)));
       $tax = (int) round((($subtotal - $discount) * $taxPercent) / 100);
       $total = $subtotal - $discount + $tax;
@@ -428,6 +455,10 @@ class PosController
         'updated_at' => now(),
       ]);
       if ($customerId) {
+        DB::table('store_customers')->updateOrInsert(
+          ['store_id' => app(\App\Support\StoreContext::class)->id(), 'user_id' => $customerId],
+          ['status' => 'active', 'updated_at' => now(), 'created_at' => now()],
+        );
         DB::table('customer_points')->insert([
           'user_id' => $customerId,
           'sale_id' => $id,

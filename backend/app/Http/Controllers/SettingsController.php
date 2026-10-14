@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 class SettingsController
 {
   private function data(): array
@@ -20,7 +20,7 @@ class SettingsController
         'default_theme' => 'light',
         'tax_percent' => 0,
       ],
-      json_decode(DB::table('system_settings')->where('id', 1)->value('settings') ?? '{}', true),
+      json_decode(DB::table('system_settings')->value('settings') ?? '{}', true),
     );
   }
   public function index()
@@ -42,7 +42,7 @@ class SettingsController
     }
     $d = $r->validate($rules);
     DB::table('system_settings')->updateOrInsert(
-      ['id' => 1],
+      [],
       ['settings' => json_encode($d), 'created_at' => now(), 'updated_at' => now()],
     );
     return response()->json($d);

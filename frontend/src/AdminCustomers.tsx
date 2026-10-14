@@ -2,7 +2,16 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { api } from './api';
 import { Search, Trash2, Users } from './icons';
 import CustomerRewards from './CustomerRewards';
-type Customer = { id: number; name: string; email: string; role: string; created_at: string };
+type Customer = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  status: 'active' | 'inactive';
+  customer_number: string | null;
+  store_notes: string | null;
+};
 type Order = {
   id: number;
   user_id?: number;
@@ -82,17 +91,36 @@ export default function AdminCustomers({
       const updated = await api<Customer>(`/admin/customers/${editing.id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          name: d.get('name'),
-          email: d.get('email'),
-          password: d.get('password') || null,
-          password_confirmation: d.get('password_confirmation') || null,
+          status: d.get('status'),
+          customer_number: d.get('customer_number') || null,
+          store_notes: d.get('store_notes') || null,
         }),
       });
       setRecords((old) => old.map((c) => (c.id === updated.id ? updated : c)));
       setEditing(null);
-      setNotice('Customer account updated.');
+      setNotice('Store customer record updated.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to update customer.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function create(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const d = new FormData(form);
+    setBusy(true);
+    setError('');
+    try {
+      const customer = await api<Customer>('/admin/customers', {
+        method: 'POST',
+        body: JSON.stringify(Object.fromEntries(d.entries())),
+      });
+      setRecords((old) => [customer, ...old]);
+      form.reset();
+      setNotice('Customer created for this store.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to create customer.');
     } finally {
       setBusy(false);
     }
@@ -100,7 +128,7 @@ export default function AdminCustomers({
   async function remove(person: Customer) {
     if (
       !confirm(
-        `Delete ${person.name}'s customer login? Their financial transaction history will remain.`,
+        `Remove ${person.name} from this store? Their login and transaction history will remain.`,
       )
     )
       return;
@@ -111,7 +139,7 @@ export default function AdminCustomers({
       setRecords((old) => old.filter((c) => c.id !== person.id));
       if (selected === person.id) setSelected(null);
       if (editing?.id === person.id) setEditing(null);
-      setNotice('Customer login and personal profile deleted.');
+      setNotice('Customer removed from this store.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to delete customer.');
     } finally {
@@ -130,6 +158,48 @@ export default function AdminCustomers({
           {notice}
         </p>
       )}
+      <form className="panel admin-customer-edit" onSubmit={create}>
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">NEW STORE CUSTOMER</span>
+            <h2>Create customer</h2>
+            <p className="muted">The backend assigns this customer to your authorized store.</p>
+          </div>
+        </div>
+        <fieldset disabled={busy}>
+          <label>
+            Name
+            <input name="name" required maxLength={100} />
+          </label>
+          <label>
+            Email
+            <input name="email" type="email" required maxLength={254} />
+          </label>
+          <label>
+            Temporary password
+            <input name="password" type="password" required minLength={8} maxLength={128} />
+          </label>
+          <label>
+            Confirm password
+            <input
+              name="password_confirmation"
+              type="password"
+              required
+              minLength={8}
+              maxLength={128}
+            />
+          </label>
+          <label>
+            Customer number
+            <input name="customer_number" maxLength={100} />
+          </label>
+          <label>
+            Store notes
+            <textarea name="store_notes" maxLength={2000} />
+          </label>
+          <button className="primary">{busy ? 'Creating…' : 'Create customer'}</button>
+        </fieldset>
+      </form>
       <section className="panel customer-directory">
         <div className="section-heading">
           <div>
@@ -137,7 +207,7 @@ export default function AdminCustomers({
             <h2>
               <Users size={20} /> Registered customers
             </h2>
-            <p className="muted">View, edit, reset the password, or remove a customer login.</p>
+            <p className="muted">View and manage customers associated with this store.</p>
           </div>
           <strong>{records.length} customers</strong>
         </div>
@@ -202,7 +272,7 @@ export default function AdminCustomers({
                           disabled={busy}
                           onClick={() => editCustomer(person)}
                         >
-                          Edit account
+                          Edit store record
                         </button>
                         <button
                           className="cash-delete"
@@ -226,43 +296,32 @@ export default function AdminCustomers({
         <form className="panel admin-customer-edit" onSubmit={save}>
           <div className="section-heading">
             <div>
-              <span className="eyebrow">EDIT CUSTOMER LOGIN</span>
+              <span className="eyebrow">EDIT STORE CUSTOMER</span>
               <h2>{editing.name}</h2>
             </div>
           </div>
           <fieldset disabled={busy}>
             <label>
-              Name
-              <input name="name" required maxLength={100} defaultValue={editing.name} />
+              Status
+              <select name="status" defaultValue={editing.status}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </label>
             <label>
-              Email
+              Customer number
               <input
-                name="email"
-                type="email"
-                required
-                maxLength={254}
-                defaultValue={editing.email}
+                name="customer_number"
+                maxLength={100}
+                defaultValue={editing.customer_number || ''}
               />
             </label>
             <label>
-              New password (optional)
-              <input
-                name="password"
-                type="password"
-                minLength={8}
-                maxLength={128}
-                autoComplete="new-password"
-              />
-            </label>
-            <label>
-              Confirm new password
-              <input
-                name="password_confirmation"
-                type="password"
-                minLength={8}
-                maxLength={128}
-                autoComplete="new-password"
+              Store notes
+              <textarea
+                name="store_notes"
+                maxLength={2000}
+                defaultValue={editing.store_notes || ''}
               />
             </label>
             <div>

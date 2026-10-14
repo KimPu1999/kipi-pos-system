@@ -1,17 +1,14 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 class PortalController
 {
   private function taxPercent(): float
   {
-    $settings = json_decode(
-      DB::table('system_settings')->where('id', 1)->value('settings') ?? '{}',
-      true,
-    );
+    $settings = json_decode(DB::table('system_settings')->value('settings') ?? '{}', true);
     return max(0, min(100, (float) ($settings['tax_percent'] ?? 0)));
   }
   private function contactData(array $c): array
@@ -76,7 +73,12 @@ class PortalController
         'updated_at' => $now,
       ]);
     }
-    foreach (DB::table('users')->where('role', 'admin')->pluck('id') as $adminId) {
+    $adminIds = DB::table('store_memberships')
+      ->where('store_id', app(\App\Support\StoreContext::class)->id())
+      ->where('role', 'admin')
+      ->where('status', 'active')
+      ->pluck('user_id');
+    foreach ($adminIds as $adminId) {
       DB::table('wishlist_notifications')->insert([
         'user_id' => $adminId,
         'product_id' => $productId,
@@ -232,6 +234,10 @@ class PortalController
         'created_at' => now(),
         'updated_at' => now(),
       ]);
+      DB::table('store_customers')->updateOrInsert(
+        ['store_id' => app(\App\Support\StoreContext::class)->id(), 'user_id' => $r->user()->id],
+        ['status' => 'active', 'updated_at' => now(), 'created_at' => now()],
+      );
       DB::table('order_items')->insert(array_map(fn($i) => [...$i, 'order_id' => $id], $lines));
       return $this->notifyOrder($id, 'Order placed');
     }, 3);
@@ -767,11 +773,26 @@ class PortalController
       'pending_orders' => DB::table('orders')
         ->whereIn('status', ['pending', 'confirmed', 'ready'])
         ->count(),
-      'customers' => DB::table('users')->where('role', 'customer')->count(),
+      'customers' => DB::table('store_customers')
+        ->where('store_id', app(\App\Support\StoreContext::class)->id())
+        ->where('status', 'active')
+        ->count(),
       'low_stock' => DB::table('products')->where('active', true)->where('stock', '<', 5)->get(),
       'people' => DB::table('users')
-        ->select('id', 'name', 'email', 'role', 'created_at')
-        ->orderByDesc('id')
+        ->join('store_customers', 'store_customers.user_id', '=', 'users.id')
+        ->where('store_customers.store_id', app(\App\Support\StoreContext::class)->id())
+        ->where('store_customers.status', 'active')
+        ->select(
+          'users.id',
+          'users.name',
+          'users.email',
+          'users.role',
+          'users.created_at',
+          'store_customers.status',
+          'store_customers.customer_number',
+          'store_customers.store_notes',
+        )
+        ->orderBy('users.id', 'desc')
         ->get(),
     ]);
   }

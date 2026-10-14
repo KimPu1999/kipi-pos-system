@@ -3,6 +3,7 @@ frontend/dist/
 backend/vendor/
 backend/.env
 backend/database/*.sqlite*
+backend/database/backups/*.sqlite*
 backend/storage/logs/*
 backend/storage/framework/cache/data/*
 backend/bootstrap/cache/*.php

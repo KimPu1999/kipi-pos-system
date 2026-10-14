@@ -4,8 +4,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ShoppingBag, LogOut } from './icons';
 import Portal from './Portal';
 import { api, ApiError, type User } from './api';
+import PlatformAdmin from './PlatformAdmin';
 export default function Auth() {
   const [user, setUser] = useState<User | null>(null);
+  const [stores, setStores] = useState<Store[] | null>(null);
+  const [storeReady, setStoreReady] = useState(false);
+  const [platformReady, setPlatformReady] = useState(false);
   const [checking, setChecking] = useState(true);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [busy, setBusy] = useState(false);
@@ -31,6 +35,56 @@ export default function Auth() {
     window.addEventListener('auth-expired', expired);
     return () => window.removeEventListener('auth-expired', expired);
   }, []);
+  useEffect(() => {
+    if (!user) {
+      setStores(null);
+      setStoreReady(false);
+      setPlatformReady(false);
+      return;
+    }
+    let active = true;
+    setBusy(true);
+    api<{ permissions: string[] }>('/platform/me')
+      .then(async ({ permissions }) => {
+        if (!active) return;
+        if (
+          permissions.includes('platform.stores.manage') &&
+          permissions.includes('platform.memberships.manage')
+        ) {
+          setPlatformReady(true);
+          return;
+        }
+        const available = await api<Store[]>('/stores');
+        setStores(available);
+        if (available.length === 1) {
+          await api('/stores/select', {
+            method: 'POST',
+            body: JSON.stringify({ store_id: available[0].id }),
+          });
+          if (active) setStoreReady(true);
+        }
+      })
+      .catch((e) => active && setError(e instanceof Error ? e.message : 'Unable to load stores.'))
+      .finally(() => active && setBusy(false));
+    return () => {
+      active = false;
+    };
+  }, [user]);
+  async function selectStore(storeId: number) {
+    setBusy(true);
+    setError('');
+    try {
+      await api('/stores/select', {
+        method: 'POST',
+        body: JSON.stringify({ store_id: storeId }),
+      });
+      setStoreReady(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to select this store.');
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -54,6 +108,9 @@ export default function Auth() {
     try {
       await api('/auth/logout', { method: 'POST' });
       setUser(null);
+      setStores(null);
+      setStoreReady(false);
+      setPlatformReady(false);
       setMode('login');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to sign out. Please retry.');
@@ -65,6 +122,53 @@ export default function Auth() {
     return (
       <div className="auth-shell">
         <p role="status">Checking your session…</p>
+      </div>
+    );
+  if (user && platformReady)
+    return (
+      <PlatformAdmin
+        logout={
+          <button className="logout" onClick={logout} disabled={busy}>
+            <LogOut size={17} /> {busy ? 'Signing out…' : 'Log out'}
+          </button>
+        }
+      />
+    );
+  if (user && (!storeReady || !stores))
+    return (
+      <div className="auth-shell">
+        <section className="auth-card store-picker">
+          <div className="auth-brand">
+            <BrandLogo />
+          </div>
+          <span className="eyebrow">KIPI POS</span>
+          <h1>{stores?.length === 1 ? 'Opening your store…' : 'Choose a store'}</h1>
+          <p>Select the store you want to browse or manage.</p>
+          {error && (
+            <div className="error" role="alert">
+              {error}
+            </div>
+          )}
+          {stores?.length === 0 && <p className="error">No active store is available.</p>}
+          <div className="store-picker-list">
+            {stores?.map((store) => (
+              <button
+                className="store-picker-option"
+                key={store.id}
+                onClick={() => void selectStore(store.id)}
+                disabled={busy}
+              >
+                <strong>{store.name}</strong>
+                <span>
+                  {store.code} · {store.currency}
+                </span>
+              </button>
+            ))}
+          </div>
+          <button className="logout" onClick={logout} disabled={busy}>
+            <LogOut size={17} /> Log out
+          </button>
+        </section>
       </div>
     );
   if (user)
@@ -179,3 +283,11 @@ export default function Auth() {
     </div>
   );
 }
+
+type Store = {
+  id: number;
+  code: string;
+  name: string;
+  timezone: string;
+  currency: string;
+};

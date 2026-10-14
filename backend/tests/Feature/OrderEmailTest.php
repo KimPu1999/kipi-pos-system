@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Services\OrderEmails;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 class OrderEmailTest extends TestCase
 {
@@ -23,6 +24,14 @@ class OrderEmailTest extends TestCase
     ]);
     $admin->role = 'admin';
     $admin->save();
+    DB::table('store_memberships')->insert([
+      'store_id' => 1,
+      'user_id' => $admin->id,
+      'role' => 'admin',
+      'status' => 'active',
+      'created_at' => now(),
+      'updated_at' => now(),
+    ]);
     $this->actingAs($admin);
     $id = $this->postJson('/api/products', [
       'name' => 'Coffee',
@@ -55,7 +64,7 @@ class OrderEmailTest extends TestCase
     $this->postJson('/api/orders/' . $order . '/confirm')->assertOk();
     $this->assertDatabaseCount('order_emails', 4);
     $this->assertDatabaseHas('order_emails', [
-      'recipient' => 'store@example.com',
+      'recipient' => 'adminmail@example.com',
       'subject' => 'Kipi POS · Order #' . $order . ' — Customer confirmed order',
     ]);
     $this->postJson('/api/orders/' . $order . '/confirm')->assertOk();

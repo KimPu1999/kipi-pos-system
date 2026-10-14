@@ -2,6 +2,7 @@
 namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 class WishlistNotificationTest extends TestCase
 {
@@ -15,6 +16,14 @@ class WishlistNotificationTest extends TestCase
     ])->refresh();
     $admin->role = 'admin';
     $admin->save();
+    DB::table('store_memberships')->insert([
+      'store_id' => 1,
+      'user_id' => $admin->id,
+      'role' => 'admin',
+      'status' => 'active',
+      'created_at' => now(),
+      'updated_at' => now(),
+    ]);
     $this->actingAs($admin);
     return (int) $this->postJson('/api/products', [
       'name' => 'Restock Coffee',
@@ -25,7 +34,9 @@ class WishlistNotificationTest extends TestCase
       'emoji' => '☕',
       'active' => true,
       ...$overrides,
-    ])->assertCreated()->json('id');
+    ])
+      ->assertCreated()
+      ->json('id');
   }
   private function admin(): User
   {
@@ -42,7 +53,9 @@ class WishlistNotificationTest extends TestCase
       'stock' => 0,
       'emoji' => '🥐',
       'active' => true,
-    ])->assertCreated()->json('id');
+    ])
+      ->assertCreated()
+      ->json('id');
     $first = User::create([
       'name' => 'First',
       'email' => 'wn-first@example.com',

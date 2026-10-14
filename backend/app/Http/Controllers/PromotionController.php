@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 use Illuminate\Validation\ValidationException;
 class PromotionController
 {
@@ -41,7 +41,16 @@ class PromotionController
       ]);
     }
     $d = $r->validate([
-      'code' => 'required|string|max:40|regex:/^[A-Z0-9_-]+$/|unique:promotions,code',
+      'code' => [
+        'required',
+        'string',
+        'max:40',
+        'regex:/^[A-Z0-9_-]+$/',
+        \Illuminate\Validation\Rule::unique('promotions', 'code')->where(
+          'store_id',
+          app(\App\Support\StoreContext::class)->id(),
+        ),
+      ],
       'name' => 'required|string|max:100',
       'percent' => 'required|integer|min:1|max:100',
       'expires_on' => 'nullable|date_format:Y-m-d|after_or_equal:today',
@@ -123,7 +132,9 @@ class PromotionController
         'string',
         'max:40',
         'regex:/^[A-Z0-9_-]+$/',
-        \Illuminate\Validation\Rule::unique('promotions', 'code')->ignore($id),
+        \Illuminate\Validation\Rule::unique('promotions', 'code')
+          ->where('store_id', app(\App\Support\StoreContext::class)->id())
+          ->ignore($id),
       ],
       'percent' => 'required|integer|min:1|max:100',
       'expires_on' => 'nullable|date_format:Y-m-d|after_or_equal:today',
@@ -205,7 +216,9 @@ class PromotionController
     $eligibleIds = array_map('intval', $ids);
     $hasScope = (bool) ($ids || $categories);
     if ($categories) {
-      $lineIds = array_values(array_unique(array_map(fn($line) => (int) $line['product_id'], $lines)));
+      $lineIds = array_values(
+        array_unique(array_map(fn($line) => (int) $line['product_id'], $lines)),
+      );
       $categoryById = DB::table('products')
         ->whereIn('id', $lineIds)
         ->pluck('category', 'id')

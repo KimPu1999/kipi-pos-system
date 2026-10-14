@@ -77,7 +77,16 @@ class BillPdfExport
         self::text((string) $value, $x + 8, 506, 11, true);
       $x += $width + 6;
     }
-    $headers = ['Bill', 'Date', 'Payment', 'Service', 'Subtotal MMK', 'Discount MMK', 'Tax MMK', 'Total MMK'];
+    $headers = [
+      'Bill',
+      'Date',
+      'Payment',
+      'Service',
+      'Subtotal MMK',
+      'Discount MMK',
+      'Tax MMK',
+      'Total MMK',
+    ];
     $widths = [50, 105, 72, 80, 125, 105, 90, 135];
     $y = 474;
     $c .= "0.18 0.20 0.24 rg\n40 " . ($y - 4) . " 762 22 re f\n";

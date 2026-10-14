@@ -2,7 +2,7 @@
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 class ReportController
 {
   public function index(Request $r)
@@ -70,10 +70,11 @@ class ReportController
     }
     $reserved = DB::table('order_items')
       ->join('orders', 'orders.id', '=', 'order_items.order_id')
+      ->where('orders.store_id', app(\App\Support\StoreContext::class)->id())
       ->whereIn('orders.status', ['pending', 'confirmed', 'ready'])
-      ->select('product_id', DB::raw('SUM(quantity) as reserved'))
-      ->groupBy('product_id')
-      ->pluck('reserved', 'product_id');
+      ->select('order_items.product_id', DB::raw('SUM(order_items.quantity) as reserved'))
+      ->groupBy('order_items.product_id')
+      ->pluck('reserved', 'order_items.product_id');
     $inventory = $products->map(
       fn($p) => [
         'id' => $p->id,

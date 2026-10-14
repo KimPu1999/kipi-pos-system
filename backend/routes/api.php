@@ -4,13 +4,49 @@ use App\Http\Controllers\PosController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 Route::middleware('web')->group(function () {
-  Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index']);
   Route::get('/auth/csrf', fn() => response()->json(['token' => csrf_token()]));
   Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
   Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
-  Route::middleware('auth')->group(function () {
+  Route::middleware(['auth', \App\Http\Middleware\ResolveStoreContext::class])->group(function () {
     Route::get('/auth/user', fn(Request $request) => response()->json($request->user()));
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/stores', [\App\Http\Controllers\StoreController::class, 'index']);
+    Route::post('/stores/select', [\App\Http\Controllers\StoreController::class, 'select']);
+    Route::get('/platform/me', [\App\Http\Controllers\PlatformAdminController::class, 'me']);
+    Route::middleware(
+      \App\Http\Middleware\RequirePlatformPermission::class .
+        ':platform.stores.manage,platform.memberships.manage',
+    )->group(function () {
+      Route::get('/platform/stores', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'stores',
+      ]);
+      Route::post('/platform/stores', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'createStore',
+      ]);
+      Route::patch('/platform/stores/{storeId}', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'updateStore',
+      ]);
+      Route::get('/platform/admins', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'admins',
+      ]);
+      Route::post('/platform/admins', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'create',
+      ]);
+    });
+    Route::middleware(
+      \App\Http\Middleware\RequirePlatformPermission::class . ':platform.memberships.manage',
+    )->group(function () {
+      Route::patch('/platform/admins/{membershipId}', [
+        \App\Http\Controllers\PlatformAdminController::class,
+        'updateMembership',
+      ]);
+    });
+    Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'index']);
     Route::get('/products', [PosController::class, 'products'])->middleware(
       \App\Http\Middleware\AdminOnly::class,
     );
@@ -26,7 +62,7 @@ Route::middleware('web')->group(function () {
     Route::get(
       '/available-tables',
       fn() => response()->json(
-        \Illuminate\Support\Facades\DB::table('dining_tables')
+        \App\Support\StoreDB::table('dining_tables')
           ->where('status', 'available')
           ->orderBy('id')
           ->get(['id', 'name', 'seats', 'area']),
@@ -107,6 +143,18 @@ Route::middleware('web')->group(function () {
       ]);
       Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'index']);
       Route::get('/notes', [\App\Http\Controllers\NoteController::class, 'index']);
+      Route::get('/admin/customers', [
+        \App\Http\Controllers\AdminCustomerController::class,
+        'index',
+      ]);
+      Route::post('/admin/customers', [
+        \App\Http\Controllers\AdminCustomerController::class,
+        'store',
+      ]);
+      Route::get('/admin/customers/{id}', [
+        \App\Http\Controllers\AdminCustomerController::class,
+        'show',
+      ]);
       Route::put('/admin/customers/{id}', [
         \App\Http\Controllers\AdminCustomerController::class,
         'update',
@@ -132,7 +180,10 @@ Route::middleware('web')->group(function () {
       Route::post('/employees', [\App\Http\Controllers\EmployeeController::class, 'store']);
       Route::put('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'update']);
 
-      Route::delete('/employees/{id}', [\App\Http\Controllers\EmployeeController::class, 'destroy']);
+      Route::delete('/employees/{id}', [
+        \App\Http\Controllers\EmployeeController::class,
+        'destroy',
+      ]);
       Route::post('/employees/{id}/check-in', [
         \App\Http\Controllers\EmployeeController::class,
         'checkIn',

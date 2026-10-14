@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Support\StoreDB as DB;
 use Illuminate\Validation\Rule;
 class DiningTableController
 {
@@ -30,7 +30,14 @@ class DiningTableController
   {
     $d = $r->validate([
       'area' => 'sometimes|required|string|max:100',
-      'name' => ['required', 'string', 'max:60', Rule::unique('dining_tables')->ignore($id)],
+      'name' => [
+        'required',
+        'string',
+        'max:60',
+        Rule::unique('dining_tables')
+          ->where('store_id', app(\App\Support\StoreContext::class)->id())
+          ->ignore($id),
+      ],
       'seats' => 'required|integer|min:1|max:100',
       'status' => 'required|in:available,occupied,reserved',
     ]);

@@ -291,7 +291,9 @@ class EmployeeTest extends TestCase
       'overnight' => false,
       'break_minutes' => 15,
     ])->assertCreated();
-    $this->deleteJson('/api/employees/' . $a)->assertOk()->assertJsonPath('message', 'Employee deleted.');
+    $this->deleteJson('/api/employees/' . $a)
+      ->assertOk()
+      ->assertJsonPath('message', 'Employee deleted.');
     $this->assertDatabaseMissing('employees', ['id' => $a]);
     $this->deleteJson('/api/employees/' . $a)->assertNotFound();
     $this->deleteJson('/api/employees/' . $b)->assertOk();

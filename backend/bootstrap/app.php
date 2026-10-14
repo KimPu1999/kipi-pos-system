@@ -9,6 +9,9 @@ return Application::configure(basePath: dirname(__DIR__))
     commands: __DIR__ . '/../routes/console.php',
   )
   ->withMiddleware(function (Middleware $middleware): void {})
+  ->withSingletons([
+    \App\Support\StoreContext::class => \App\Support\StoreContext::class,
+  ])
   ->withExceptions(function (Exceptions $exceptions): void {
     $exceptions->shouldRenderJsonWhen(
       fn($request, $e) => $request->is('api/*') || $request->expectsJson(),

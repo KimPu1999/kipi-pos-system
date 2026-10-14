@@ -11,10 +11,20 @@ class GoogleSheetsSync
       throw new \RuntimeException('Google Sheets sync is disabled. Configure backend/.env first.');
     }
     $id = config('google_sheets.spreadsheet_id');
+    $storeId = filter_var(config('google_sheets.store_id'), FILTER_VALIDATE_INT);
+    if (
+      !$storeId ||
+      !DB::table('stores')->where('id', $storeId)->where('status', 'active')->exists()
+    ) {
+      throw new \RuntimeException('Set GOOGLE_SHEETS_STORE_ID to an active store.');
+    }
     if (!$id || !preg_match('/^[A-Za-z0-9_-]+$/', $id)) {
       throw new \RuntimeException('Set a valid GOOGLE_SHEETS_SPREADSHEET_ID.');
     }
-    return Cache::lock('kipi-google-sheets-sync', 300)->block(1, function () use ($id) {
+    return Cache::lock('kipi-google-sheets-sync-' . $storeId, 300)->block(1, function () use (
+      $id,
+      $storeId,
+    ) {
       $path = config('google_sheets.credentials');
       if (!is_readable($path)) {
         throw new \RuntimeException('Service-account credential file is missing or unreadable.');
@@ -136,7 +146,10 @@ class GoogleSheetsSync
             $byId[(string) $row[0]] = $row;
           }
         }
-        foreach (DB::table($table)->orderBy('id')->get($columns) as $record) {
+        foreach (
+          DB::table($table)->where('store_id', $storeId)->orderBy('id')->get($columns)
+          as $record
+        ) {
           $row = [];
           foreach ($columns as $column) {
             $value = $record->$column ?? '';

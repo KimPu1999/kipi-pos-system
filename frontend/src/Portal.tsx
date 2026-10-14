@@ -127,7 +127,12 @@ type Dashboard = {
   pending_orders: number;
   customers: number;
   low_stock: Product[];
-  people: (User & { created_at: string })[];
+  people: (User & {
+    created_at: string;
+    status: 'active' | 'inactive';
+    customer_number: string | null;
+    store_notes: string | null;
+  })[];
 };
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
